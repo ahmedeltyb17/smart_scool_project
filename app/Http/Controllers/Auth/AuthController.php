@@ -1,0 +1,184 @@
+<?php
+
+namespace App\Http\Controllers\Auth;
+
+use App\Http\Controllers\Controller;
+use App\Models\User;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rules\Password;
+use Illuminate\Validation\ValidationException;
+
+/**
+ * AuthController
+ *
+ * Handles registration, login, logout, and profile management
+ * for all roles: admin, teacher, student, parent.
+ */
+class AuthController extends Controller
+{
+    // ──────────────────────────────────────────────────────────────────────
+    // POST /api/v1/auth/login
+    // ──────────────────────────────────────────────────────────────────────
+    public function login(Request $request): JsonResponse
+    {
+        $credentials = $request->validate([
+            'email'    => ['required', 'string', 'email'],
+            'password' => ['required', 'string'],
+        ]);
+
+        $user = User::where('email', $credentials['email'])->first();
+
+        if (! $user || ! Hash::check($credentials['password'], $user->password)) {
+            throw ValidationException::withMessages([
+                'email' => ['The provided credentials are incorrect.'],
+            ]);
+        }
+
+        if (! $user->is_active) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Your account has been deactivated. Contact your administrator.',
+            ], 403);
+        }
+
+        // Single-session policy: revoke previous tokens
+        $user->tokens()->delete();
+
+        $token = $user->createToken('api-token')->plainTextToken;
+
+        // Eager-load the correct profile relation based on role
+        $profile = match ($user->role) {
+            'student' => $user->load('student'),
+            'teacher' => $user->load('teacher'),
+            'parent'  => $user->load('parentProfile'),
+            default   => $user,
+        };
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Login successful.',
+            'data' => [
+                'user'       => $profile,
+                'token'      => $token,
+                'token_type' => 'Bearer',
+            ],
+        ]);
+    }
+
+    // ──────────────────────────────────────────────────────────────────────
+    // POST /api/v1/auth/register  (Admin-only in production)
+    // ──────────────────────────────────────────────────────────────────────
+    public function register(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'name'     => ['required', 'string', 'max:255'],
+            'email'    => ['required', 'string', 'email', 'max:255', 'unique:users'],
+            'password' => ['required', Password::min(8)->mixedCase()->numbers()],
+            'role'     => ['required', 'in:admin,teacher,student,parent'],
+            'phone'    => ['nullable', 'string', 'max:20'],
+            'student_id' => ['nullable', 'string', 'max:255'],
+            'address'   => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $user = User::create([
+            'name'      => $data['name'],
+            'email'     => $data['email'],
+            'password'  => $data['password'],
+            'role'      => $data['role'],
+            'phone'     => $data['phone'] ?? null,
+            'student_id'=> $data['student_id'] ?? null,
+            'address'   => $data['address'] ?? null,
+            'is_active' => true,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'User registered successfully.',
+            'data'    => ['user' => $user],
+        ], 201);
+    }
+
+    // ──────────────────────────────────────────────────────────────────────
+    // POST /api/v1/auth/logout
+    // ──────────────────────────────────────────────────────────────────────
+    public function logout(Request $request): JsonResponse
+    {
+        $request->user()->currentAccessToken()->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Logged out successfully.',
+        ]);
+    }
+
+    // ──────────────────────────────────────────────────────────────────────
+    // GET /api/v1/auth/me
+    // ──────────────────────────────────────────────────────────────────────
+    public function me(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        $profile = match ($user->role) {
+            'student' => $user->load('student.class'),
+            'teacher' => $user->load('teacher.classes'),
+            'parent'  => $user->load('parentProfile.students.user'),
+            default   => $user,
+        };
+
+        return response()->json([
+            'success' => true,
+            'data'    => ['user' => $profile],
+        ]);
+    }
+
+    // ──────────────────────────────────────────────────────────────────────
+    // PUT /api/v1/auth/profile
+    // ──────────────────────────────────────────────────────────────────────
+    public function updateProfile(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        $data = $request->validate([
+            'name'  => ['sometimes', 'string', 'max:255'],
+            'phone' => ['nullable', 'string', 'max:20'],
+            'email' => ['sometimes', 'string', 'email', 'unique:users,email,' . $user->id],
+        ]);
+
+        $user->update($data);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Profile updated.',
+            'data'    => ['user' => $user->fresh()],
+        ]);
+    }
+
+    // ──────────────────────────────────────────────────────────────────────
+    // PUT /api/v1/auth/password
+    // ──────────────────────────────────────────────────────────────────────
+    public function changePassword(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'current_password' => ['required', 'string'],
+            'password'         => ['required', Password::min(8)->mixedCase()->numbers()],
+        ]);
+
+        $user = $request->user();
+
+        if (! Hash::check($data['current_password'], $user->password)) {
+            throw ValidationException::withMessages([
+                'current_password' => ['Current password is incorrect.'],
+            ]);
+        }
+
+        $user->update(['password' => $data['password']]);
+        $user->tokens()->delete(); // force re-login everywhere
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Password changed. Please log in again.',
+        ]);
+    }
+}
