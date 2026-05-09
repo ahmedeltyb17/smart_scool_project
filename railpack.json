@@ -1,6 +1,21 @@
 {
+
   "$schema": "https://schema.railpack.com",
   "packages": {
     "php": "8.4"
   }
 }
+=======
+  "phpVersion": "8.4",
+  "aptPkgs": [
+    "bison",
+    "re2c",
+    "libxml2-dev",
+    "libonig-dev",
+    "libzip-dev",
+    "pkg-config",
+    "autoconf",
+    "build-essential"
+  ]
+}
+
