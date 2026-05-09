@@ -37,9 +37,9 @@ class ChatbotController extends Controller
         ]);
     }
 
-    // ──────────────────────────────────────────────────────────────────────
+
     // POST /chatbot/conversations  — Start a new chatbot session
-    // ──────────────────────────────────────────────────────────────────────
+    
     public function startConversation(Request $request): JsonResponse
     {
         $data = $request->validate([

@@ -5,13 +5,16 @@ namespace App\Http\Controllers\Parent;
 use App\Http\Controllers\Controller;
 use App\Models\Attendance;
 use App\Models\Grade;
-use App\Models\ParentStudent;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rules\Password;
-
+use App\Models\ParentModel;
+use App\Models\Student;
+use App\Models\ClassModel;
+use App\Models\Parent_Student;
+use Illuminate\support\Facades\Hash;
 /**
  * ParentController
  *
@@ -32,11 +35,11 @@ class ParentController extends Controller
     // ──────────────────────────────────────────────────────────────────────
     public function index(Request $request): JsonResponse
     {
-        $parents = \App\Models\ParentModel::with(['user', 'students.user'])
+        $parents = ParentModel::with(['user', 'students.user'])
             ->when($request->search, fn ($q) =>
                 $q->whereHas('user', fn ($u) =>
                     $u->where('name', 'like', "%{$request->search}%")
-                      ->orWhere('email', 'like', "%{$request->search}%")
+                    ->orWhere('email', 'like', "%{$request->search}%")
                 )
             )
             ->paginate($request->per_page ?? 15);
@@ -84,10 +87,9 @@ class ParentController extends Controller
             // Link children if provided
             if (! empty($data['student_ids'])) {
                 foreach ($data['student_ids'] as $studentId) {
-                    ParentStudent::create([
-                        'parent_id'  => $parent->id,
-                        'student_id' => $studentId,
-                    ]);
+                $parent->students()
+                ->syncWithoutDetaching($data['student_ids']);
+
                 }
             }
 
@@ -128,42 +130,50 @@ class ParentController extends Controller
     // POST /parents/{id}/link-student  — Admin only
     // Link an existing student to a parent
     // ──────────────────────────────────────────────────────────────────────
-    public function linkStudent(Request $request, int $id): JsonResponse
-    {
-        \App\Models\ParentModel::findOrFail($id);
+    public function linkStudent(Request $request): JsonResponse
+{
+    if ($request->user()->role !== 'parent') {
+    abort(403);
+}
+    $data = $request->validate([
+        'student_id' => ['required', 'string', 'exists:students,student_id'],
+    ]);
 
-        $data = $request->validate([
-            'student_id' => ['required', 'integer', 'exists:students,id'],
-        ]);
+    $student = Student::where('student_id', $data['student_id'])->first();
 
-        $exists = ParentStudent::where('parent_id', $id)
-                               ->where('student_id', $data['student_id'])
-                               ->exists();
-
-        if ($exists) {
-            return response()->json(['success' => false, 'message' => 'Already linked.'], 422);
-        }
-
-        ParentStudent::create([
-            'parent_id'  => $id,
-            'student_id' => $data['student_id'],
-        ]);
-
+    if (!$student) {
         return response()->json([
-            'success' => true,
-            'message' => 'Student linked to parent.',
-        ]);
+            'success' => false,
+            'message' => 'Student not found'
+        ], 404);
     }
 
+    if ($Parent->students()->where('students.id', $student->id)->exists()) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Already linked'
+        ], 422);
+    }
+
+    $Parent->students()->attach($student->id);
+
+    return response()->json([
+        'success' => true,
+        'message' => 'Student linked successfully'
+    ]);
+}
     // ──────────────────────────────────────────────────────────────────────
     // DELETE /parents/{id}/unlink-student/{studentId}  — Admin only
     // ──────────────────────────────────────────────────────────────────────
     public function unlinkStudent(int $id, int $studentId): JsonResponse
     {
-        ParentStudent::where('parent_id', $id)
-                     ->where('student_id', $studentId)
-                     ->firstOrFail()
-                     ->delete();
+        if (auth()->user()->role !== 'admin') {
+            return response()->json(['success' => false, 'message' => 'Access denied.'], 403);
+        }
+        Parent_Student::where('parent_id', $id)
+                    ->where('student_id', $studentId)
+                    ->firstOrFail()
+                    ->delete();
 
         return response()->json([
             'success' => true,
@@ -262,13 +272,16 @@ class ParentController extends Controller
         if ($request->user()->role === 'parent') {
             $own = $request->user()->parentProfile;
 
-            $linked = ParentStudent::where('parent_id', $parentId)
-                                   ->where('student_id', $studentId)
-                                   ->exists();
+            $linked = Parent_Student::where('parent_id', $parentId)
+                                ->where('student_id', $studentId)
+                                ->exists();
 
             if (! $own || $own->id !== $parentId || ! $linked) {
-                abort(response()->json(['success' => false, 'message' => 'Access denied.'], 403));
+                
+                abort(403, 'Access denied.');
             }
+            
         }
     }
+
 }

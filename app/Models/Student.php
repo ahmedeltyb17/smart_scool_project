@@ -7,16 +7,28 @@ use Illuminate\Database\Eloquent\Model;
     class Student extends Model
 {
     use HasFactory;
+    protected $fillable = ['user_id'];
+    protected $table = 'students';
+    protected static function booted()
+{
+    static::creating(function ($student) {
+        $last = self::latest()->first();
+        $number = $last ? intval(substr($last->student_id, 4)) + 1 : 1;
 
-    public function user()
+        $student->student_id = 'STD-' . str_pad($number, 4, '0', STR_PAD_LEFT);
+    });
+}
+    public function user() 
+    
     {
         return $this->belongsTo(User::class);
     }
 
     public function parents()
     {
-        return $this->belongsToMany(ParentModel::class, 'parent_students', 'student_id', 'parent_id');
-    }
+        return $this->belongsToMany(ParentModel::class, 'parent_student', 'student_id', 'parent_id');
+         return $this->belongsTo(ParentModel::class, 'parent_id');
+        }
 
     public function classes()
     {

@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers\Student;
 
+use App\Notifications\StudentAbsentNotification;
+use Illuminate\Support\Facades\Notification;
 use App\Http\Controllers\Controller;
 use App\Models\Attendance;
-use App\Models\Classes;
+use App\Models\ClassModel;
 use App\Models\Student;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -24,53 +26,40 @@ class AttendanceController extends Controller
     // POST /attendance/mark  — Teacher / Admin
     // Bulk-mark attendance for a class session
     // ──────────────────────────────────────────────────────────────────────
-    public function mark(Request $request): JsonResponse
-    {
-        $data = $request->validate([
-            'class_id'             => ['required', 'integer', 'exists:classes,id'],
-            'schedule_id'          => ['nullable', 'integer', 'exists:schedules,id'],
-            'date'                 => ['required', 'date', 'before_or_equal:today'],
-            'records'              => ['required', 'array', 'min:1'],
-            'records.*.student_id' => ['required', 'integer', 'exists:students,id'],
-            'records.*.status'     => ['required', 'in:present,absent,late,excused'],
-            'records.*.notes'      => ['nullable', 'string', 'max:500'],
-        ]);
+    public function mark(Request $request)
+{
+    $request->validate([
+        'student_id' => 'required',
+        'class_id' => 'required',
+        'status' => 'required|in:present,absent,late',
+    ]);
 
-        // If teacher, verify ownership of the class
-        $user = $request->user();
-        if ($user->role === 'teacher') {
-            $owns = Classes::where('id', $data['class_id'])
-                           ->where('teacher_id', $user->teacher->id)
-                           ->exists();
-            if (! $owns) {
-                return response()->json(['success' => false, 'message' => 'Access denied. Not your class.'], 403);
-            }
-        }
+    $attendance = Attendance::create([
+        'student_id' => $request->student_id,
+        'class_id' => $request->class_id,
+        'status' => $request->status,
+        'date' => now()->toDateString(),
+    ]);
 
-        $saved = [];
-        foreach ($data['records'] as $record) {
-            $saved[] = Attendance::updateOrCreate(
-                [
-                    'student_id'  => $record['student_id'],
-                    'class_id'    => $data['class_id'],
-                    'date'        => $data['date'],
-                ],
-                [
-                    'schedule_id' => $data['schedule_id'] ?? null,
-                    'status'      => $record['status'],
-                    'notes'       => $record['notes'] ?? null,
-                    'marked_by'   => $user->id,
-                ]
+    // 🔥 لو absent ابعت notification
+    if ($request->status === 'absent') {
+
+        $student = Student::with('parents')->find($request->student_id);
+
+        if ($student && $student->parents->count() > 0) {
+
+            Notification::send(
+                $student->parents,
+                new StudentAbsentNotification($student, now()->toDateString())
             );
         }
-
-        return response()->json([
-            'success' => true,
-            'message' => count($saved) . ' record(s) saved.',
-            'data'    => ['records' => $saved],
-        ]);
     }
 
+    return response()->json([
+        'success' => true,
+        'data' => $attendance
+    ]);
+}
     // ──────────────────────────────────────────────────────────────────────
     // GET /attendance/report  — Teacher / Admin
     // ──────────────────────────────────────────────────────────────────────
@@ -114,42 +103,44 @@ class AttendanceController extends Controller
     // ──────────────────────────────────────────────────────────────────────
     // GET /attendance/student/{studentId}  — Admin, Teacher, own Student
     // ──────────────────────────────────────────────────────────────────────
-    public function studentHistory(Request $request, int $studentId): JsonResponse
-    {
-        // Students can only view their own attendance
-        if ($request->user()->role === 'student') {
-            $own = $request->user()->student;
-            if (! $own || $own->id !== $studentId) {
-                return response()->json(['success' => false, 'message' => 'Access denied.'], 403);
-            }
+    public function studentHistory(Request $request, ?int $studentId = null): JsonResponse
+{
+    // لو طالب → خليه يجيب نفسه
+    if ($request->user()->role === 'student') {
+        $own = $request->user()->student;
+
+        if (! $own) {
+            return response()->json(['success' => false, 'message' => 'Student not found'], 404);
         }
 
-        $history = Attendance::with('class', 'schedule')
-            ->where('student_id', $studentId)
-            ->orderBy('date', 'desc')
-            ->paginate($request->per_page ?? 20);
-
-        // Compute summary stats
-        $all     = Attendance::where('student_id', $studentId)->get();
-        $total   = $all->count();
-        $present = $all->where('status', 'present')->count();
-
-        return response()->json([
-            'success' => true,
-            'data' => [
-                'summary' => [
-                    'total_sessions'  => $total,
-                    'present'         => $present,
-                    'absent'          => $all->where('status', 'absent')->count(),
-                    'late'            => $all->where('status', 'late')->count(),
-                    'attendance_rate' => $total > 0
-                        ? round(($present / $total) * 100, 2) . '%'
-                        : '0%',
-                ],
-                'history' => $history,
-            ],
-        ]);
+        $studentId = $own->id;
     }
+
+    $history = Attendance::with('class', 'schedule')
+        ->where('student_id', $studentId)
+        ->orderBy('date', 'desc')
+        ->paginate($request->per_page ?? 20);
+
+    $all     = Attendance::where('student_id', $studentId)->get();
+    $total   = $all->count();
+    $present = $all->where('status', 'present')->count();
+
+    return response()->json([
+        'success' => true,
+        'data' => [
+            'summary' => [
+                'total_sessions'  => $total,
+                'present'         => $present,
+                'absent'          => $all->where('status', 'absent')->count(),
+                'late'            => $all->where('status', 'late')->count(),
+                'attendance_rate' => $total > 0
+                    ? round(($present / $total) * 100, 2) . '%'
+                    : '0%',
+            ],
+            'history' => $history,
+        ],
+    ]);
+}
 
     // ──────────────────────────────────────────────────────────────────────
     // PUT /attendance/{id}  — Teacher / Admin

@@ -9,6 +9,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\ValidationException;
+use App\Models\Student;
+use App\Models\Teacher;
+use App\Models\ParentModel;
 
 /**
  * AuthController
@@ -78,7 +81,6 @@ class AuthController extends Controller
             'password' => ['required', Password::min(8)->mixedCase()->numbers()],
             'role'     => ['required', 'in:admin,teacher,student,parent'],
             'phone'    => ['nullable', 'string', 'max:20'],
-            'student_id' => ['nullable', 'string', 'max:255'],
             'address'   => ['nullable', 'string', 'max:255'],
         ]);
 
@@ -88,10 +90,26 @@ class AuthController extends Controller
             'password'  => $data['password'],
             'role'      => $data['role'],
             'phone'     => $data['phone'] ?? null,
-            'student_id'=> $data['student_id'] ?? null,
             'address'   => $data['address'] ?? null,
             'is_active' => true,
         ]);
+
+        if ($data['role'] === 'student') {
+        Student::create([
+            'user_id' => $user->id
+        ]);
+    }
+
+    if ($data['role'] === 'teacher') {
+        Teacher::create([
+            'user_id' => $user->id
+        ]);
+    }
+    if ($data['role'] === 'parent') {
+        ParentModel::create([
+            'user_id' => $user->id
+        ]);
+    }
 
         return response()->json([
             'success' => true,

@@ -4,39 +4,207 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
-use Illuminate\Auth\Events\Registered;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\Rules;
+use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\ValidationException;
+use App\Models\Student;
+use App\Models\Teacher;
+use App\Models\ParentModel;
 
-class RegisteredUserController extends Controller
+/**
+ * AuthController
+ *
+ * Handles registration, login, logout, and profile management
+ * for all roles: admin, teacher, student, parent.
+ */
+class AuthController extends Controller
 {
-    /**
-     * Handle an incoming registration request.
-     *
-     * @throws ValidationException
-     */
-    public function store(Request $request): Response
+    // ──────────────────────────────────────────────────────────────────────
+    // POST /api/v1/auth/login
+    // ──────────────────────────────────────────────────────────────────────
+    public function login(Request $request): JsonResponse
     {
-        $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
-            'password' => ['required', 'confirmed', Rules\Password::defaults()],
+        $credentials = $request->validate([
+            'email'    => ['required', 'string', 'email'],
+            'password' => ['required', 'string'],
         ]);
 
-        $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => Hash::make($request->string('password')),
+        $user = User::where('email', $credentials['email'])->first();
+
+        if (! $user || ! Hash::check($credentials['password'], $user->password)) {
+            throw ValidationException::withMessages([
+                'email' => ['The provided credentials are incorrect.'],
+            ]);
+        }
+
+        if (! $user->is_active) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Your account has been deactivated. Contact your administrator.',
+            ], 403);
+        }
+
+        // Single-session policy: revoke previous tokens
+        $user->tokens()->delete();
+
+        $token = $user->createToken('api-token')->plainTextToken;
+
+        // Eager-load the correct profile relation based on role
+        $profile = match ($user->role) {
+            'student' => $user->load('student'),
+            'teacher' => $user->load('teacher'),
+            'parent'  => $user->load('parent'),
+            default   => $user,
+        };
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Login successful.',
+            'data' => [
+                'user'       => $profile,
+                'token'      => $token,
+                'token_type' => 'Bearer',
+            ],
+        ]);
+    }
+
+    // ──────────────────────────────────────────────────────────────────────
+    // POST /api/v1/auth/register  (Admin-only in production)
+    // ──────────────────────────────────────────────────────────────────────
+    public function register(Request $request): JsonResponse
+{
+        $data = $request->validate([
+        'name'     => ['required', 'string', 'max:255'],
+        'email'    => ['required', 'string', 'email', 'max:255', 'unique:users'],
+        'password' => ['required', 'confirmed'],
+        'role'     => ['required', 'in:admin,teacher,student,parent'],
+        'phone'    => ['nullable', 'string', 'max:20'],
+        'address'  => ['nullable', 'string', 'max:255'],
+    ]);
+
+    // 🔥 مهم: اعمل hash
+    $data['password'] = Hash::make($data['password']);
+
+    $user = User::create([
+        'name'      => $data['name'],
+        'email'     => $data['email'],
+        'password'  => $data['password'],
+        'role'      => $data['role'],
+        'phone'     => $data['phone'] ?? null,
+        'address'   => $data['address'] ?? null,
+        'student_id' => $data['student_id'] ?? null,
+        'is_active' => true,
+    ]);
+
+    // 🔥 الحل هنا
+    if ($data['role'] === 'students') {
+
+        $student = new Student();
+        $student->user_id = $user->id;
+        $student->save();
+
+    }
+
+    if ($data['role'] === 'teacher') {
+
+        $teacher = new Teacher();
+        $teacher->user_id = $user->id;
+        $teacher->save();
+    }
+    if ($data['role'] === 'parent') {
+
+        $parent = new ParentModel();
+        $parent->user_id = $user->id;
+        $parent->save();
+    }
+
+    return response()->json([
+        'success' => true,
+        'message' => 'User registered successfully.',
+        'data'    => ['user' => $user],
+    ], 201);
+}
+    // ──────────────────────────────────────────────────────────────────────
+    // POST /api/v1/auth/logout
+    // ──────────────────────────────────────────────────────────────────────
+    public function logout(Request $request): JsonResponse
+    {
+        $request->user()->currentAccessToken()->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Logged out successfully.',
+        ]);
+    }
+
+    // ──────────────────────────────────────────────────────────────────────
+    // GET /api/v1/auth/me
+    // ──────────────────────────────────────────────────────────────────────
+    public function me(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        $profile = match ($user->role) {
+            'student' => $user->load('student.class'),
+            'teacher' => $user->load('teacher.classes'),
+            'parent'  => $user->load('parent.students.user'),
+            default   => $user,
+        };
+
+        return response()->json([
+            'success' => true,
+            'data'    => ['user' => $profile],
+        ]);
+    }
+
+    // ──────────────────────────────────────────────────────────────────────
+    // PUT /api/v1/auth/profile
+    // ──────────────────────────────────────────────────────────────────────
+    public function updateProfile(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        $data = $request->validate([
+            'name'  => ['sometimes', 'string', 'max:255'],
+            'phone' => ['nullable', 'string', 'max:20'],
+            'email' => ['sometimes', 'string', 'email', 'unique:users,email,' . $user->id],
         ]);
 
-        event(new Registered($user));
+        $user->update($data);
 
-        Auth::login($user);
+        return response()->json([
+            'success' => true,
+            'message' => 'Profile updated.',
+            'data'    => ['user' => $user->fresh()],
+        ]);
+    }
 
-        return response()->noContent();
+    // ──────────────────────────────────────────────────────────────────────
+    // PUT /api/v1/auth/password
+    // ──────────────────────────────────────────────────────────────────────
+    public function changePassword(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'current_password' => ['required', 'string'],
+            'password'         => ['required', 'confirmed', Password::min(8)->mixedCase()->numbers()],
+        ]);
+
+        $user = $request->user();
+
+        if (! Hash::check($data['current_password'], $user->password)) {
+            throw ValidationException::withMessages([
+                'current_password' => ['Current password is incorrect.'],
+            ]);
+        }
+
+        $user->update(['password' => $data['password']]);
+        $user->tokens()->delete(); // force re-login everywhere
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Password changed. Please log in again.',
+        ]);
     }
 }
