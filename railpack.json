@@ -1,19 +1,6 @@
 {
-<<<<<<< HEAD
   "$schema": "https://schema.railpack.com",
   "packages": {
     "php": "8.4"
   }
 }
-=======
-=======
-  "phpVersion": "8.4"
-}
->>>>>>> fd87862 (fix php version)
-    
-=======
-=======
-  "phpVersion": "8.4"
-}
->>>>>>> fd87862 (fix php version)
-    
