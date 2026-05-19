@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 class ClassModel extends Model
 {
     use HasFactory;
+    protected $table = 'classes';
 
     public function teacher()
     {
@@ -16,7 +17,7 @@ class ClassModel extends Model
 
     public function students()
     {
-        return $this->belongsToMany(Student::class, 'class_student', 'class_id', 'student_id');
+        return $this->belongsToMany(Student::class, 'students.class_id', 'class_id', 'student_id');
     }
 
     public function assignments()

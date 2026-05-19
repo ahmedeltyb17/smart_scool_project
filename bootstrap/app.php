@@ -31,6 +31,12 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
 
     })
+    ->withMiddleware(function ($middleware) {
+    $middleware->alias([
+        'role' => \App\Http\Middleware\RoleMiddleware::class,
+    ]);
+})
+
     ->withExceptions(function (Exceptions $exceptions) {
 
         $exceptions->render(function (\Symfony\Component\HttpKernel\Exception\NotFoundHttpException $e, $request) {

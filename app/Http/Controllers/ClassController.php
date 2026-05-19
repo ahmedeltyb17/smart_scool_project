@@ -1,12 +1,14 @@
 <?php
 
-namespace App\Http\Controllers\Teacher;
+namespace App\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\ClassModel;
 use App\Models\Schedules;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use App\Models\Student;
 
 /**
  * ClassController
@@ -49,11 +51,13 @@ class ClassController extends Controller
 {
     $class = ClassModel::findOrFail($id);
 
-    $request->validate([
-        'student_id' => ['required', 'exists:students,id']
-    ]);
+    $student = Student::where('student_id', $request->student_id)->firstOrFail();
 
-    $class->students()->syncWithoutDetaching([$request->student_id]);
+    $class->students()->syncWithoutDetaching([$student->id]);
+    $request->validate([
+        'student_id' => ['required', 'exists:students,student_id']
+    ]);
+    
 
     return response()->json([
         'success' => true,

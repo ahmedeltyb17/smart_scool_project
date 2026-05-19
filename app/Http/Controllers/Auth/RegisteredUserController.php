@@ -14,12 +14,12 @@ use App\Models\Teacher;
 use App\Models\ParentModel;
 
 /**
- * AuthController
+ * RegisteredUserController
  *
  * Handles registration, login, logout, and profile management
  * for all roles: admin, teacher, student, parent.
  */
-class AuthController extends Controller
+class RegisteredUserController extends Controller
 {
     // ──────────────────────────────────────────────────────────────────────
     // POST /api/v1/auth/login
@@ -113,7 +113,7 @@ class AuthController extends Controller
         $teacher->user_id = $user->id;
         $teacher->save();
     }
-    if ($data['role'] === 'parent') {
+    if ($data['role'] === 'parents') {
 
         $parent = new ParentModel();
         $parent->user_id = $user->id;

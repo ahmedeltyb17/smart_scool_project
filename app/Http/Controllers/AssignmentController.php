@@ -1,12 +1,13 @@
 <?php
 
-namespace App\Http\Controllers\Teacher;
+namespace App\Http\Controllers\AssignmentController;
 
 use App\Http\Controllers\Controller;
 use App\Models\Assignment;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+
 
 /**
  * AssignmentController
@@ -69,7 +70,7 @@ class AssignmentController extends Controller
             $teacherId = $request->user()->teacher->id;
             $data['teacher_id'] = $teacherId;
 
-            $ownsClass = \App\Models\Classes::where('id', $data['class_id'])
+            $ownsClass = \App\Models\ClassModel::where('id', $data['class_id'])
                                             ->where('teacher_id', $teacherId)
                                             ->exists();
             if (! $ownsClass) {

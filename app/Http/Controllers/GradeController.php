@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Student;
+namespace App\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\Grade;
@@ -45,13 +45,30 @@ class GradeController extends Controller
         ]);
     }
 
+    //------------------------------------
+    // show my grades for student
+    //------------------------------------
+    public function myGrades(Request $request)
+{
+    $student = $request->user()->student;
+
+    $grades = Grade::with('assignment')
+        ->where('student_id', $student->id)
+        ->get();
+
+    return response()->json([
+        'success' => true,
+        'data' => $grades
+    ]);
+}
+
     // ──────────────────────────────────────────────────────────────────────
     // POST /grades  — Teacher / Admin
     // ──────────────────────────────────────────────────────────────────────
     public function store(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'student_id'    => ['required', 'integer', 'exists:students,id'],
+            'student_id' => ['required', 'string', 'exists:students,student_id'],
             'assignment_id' => ['required', 'integer', 'exists:assignments,id'],
             'score'         => ['required', 'numeric', 'min:0', 'max:100'],
             'letter_grade'  => ['nullable', 'string', 'max:5'],

@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Parent;
+namespace App\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\Attendance;
@@ -10,11 +10,11 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rules\Password;
-use App\Models\ParentModel;
 use App\Models\Student;
 use App\Models\ClassModel;
 use App\Models\Parent_Student;
 use Illuminate\support\Facades\Hash;
+use App\Models\ParentModel;
 /**
  * ParentController
  *
@@ -50,10 +50,39 @@ class ParentController extends Controller
         ]);
     }
 
+
+////profile parent  ____________________________
+    
+    
+    public function profile(Request $request): JsonResponse
+{
+    $parent = ParentModel::with([
+        'user',
+        'students.user',
+        'students.classes'
+    ])->where('user_id', $request->user()->id)
+    ->first();
+
+    if (!$parent) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Parent profile not found'
+        ], 404);
+    }
+
+    return response()->json([
+        'success' => true,
+        'data' => [
+            'parent' => $parent
+        ]
+    ]);
+} 
     // ──────────────────────────────────────────────────────────────────────
     // POST /parents  — Admin only
     // Create a parent account
     // ──────────────────────────────────────────────────────────────────────
+
+    
     public function store(Request $request): JsonResponse
     {
         $data = $request->validate([
@@ -111,7 +140,7 @@ class ParentController extends Controller
     // ──────────────────────────────────────────────────────────────────────
     public function show(Request $request, int $id): JsonResponse
     {
-        $parent = \App\Models\ParentModel::with(['user', 'students.user', 'students.class'])->findOrFail($id);
+        $parent = \App\Models\ParentModel::with(['user', 'students.user', 'students.classes'])->findOrFail($id);
 
         if ($request->user()->role === 'parent') {
             $own = $request->user()->parentProfile;
@@ -132,6 +161,8 @@ class ParentController extends Controller
     // ──────────────────────────────────────────────────────────────────────
     public function linkStudent(Request $request): JsonResponse
 {
+    $parent = $request->user()->parentProfile;
+
     if ($request->user()->role !== 'parent') {
     abort(403);
 }
@@ -148,14 +179,14 @@ class ParentController extends Controller
         ], 404);
     }
 
-    if ($Parent->students()->where('students.id', $student->id)->exists()) {
+    if ($parent->students()->where('students.id', $student->id)->exists()) {
         return response()->json([
             'success' => false,
             'message' => 'Already linked'
         ], 422);
     }
 
-    $Parent->students()->attach($student->id);
+    $parent->students()->attach($student->id);
 
     return response()->json([
         'success' => true,
@@ -165,27 +196,23 @@ class ParentController extends Controller
     // ──────────────────────────────────────────────────────────────────────
     // DELETE /parents/{id}/unlink-student/{studentId}  — Admin only
     // ──────────────────────────────────────────────────────────────────────
-    public function unlinkStudent(int $id, int $studentId): JsonResponse
-    {
-        if (auth()->user()->role !== 'admin') {
-            return response()->json(['success' => false, 'message' => 'Access denied.'], 403);
-        }
-        Parent_Student::where('parent_id', $id)
-                    ->where('student_id', $studentId)
-                    ->firstOrFail()
-                    ->delete();
+    public function unlinkStudent(Request $request, int $studentId)
+{
+    $parent = $request->user()->parentProfile;
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Student unlinked.',
-        ]);
-    }
+    $parent->students()->detach($studentId);
+
+    return response()->json([
+        'success' => true,
+        'message' => 'Student unlinked.'
+    ]);
+}
 
     // ──────────────────────────────────────────────────────────────────────
     // GET /parents/{id}/children  — Admin or own Parent
     // List all children linked to this parent
     // ──────────────────────────────────────────────────────────────────────
-    public function children(Request $request, int $id): JsonResponse
+    public function children(Request $request, string $id): JsonResponse
     {
         $parent = \App\Models\ParentModel::findOrFail($id);
 
@@ -196,7 +223,7 @@ class ParentController extends Controller
             }
         }
 
-        $students = $parent->students()->with(['user', 'class'])->get();
+        $students = $parent->students()->with(['user', 'classes'])->get();
 
         return response()->json([
             'success' => true,
@@ -208,41 +235,52 @@ class ParentController extends Controller
     // GET /parents/{id}/children/{studentId}/attendance
     // Parent views their child's attendance
     // ──────────────────────────────────────────────────────────────────────
-    public function childAttendance(Request $request, int $id, int $studentId): JsonResponse
-    {
-        $this->authorizeParentAccess($request, $id, $studentId);
+    public function childAttendance(Request $request, string $studentId): JsonResponse
+{
+    // هات الطالب من الـ public student_id
+    $student = Student::where('student_id', $studentId)->firstOrFail();
 
-        $history = Attendance::with('class')
-            ->where('student_id', $studentId)
-            ->orderBy('date', 'desc')
-            ->paginate(20);
+    // تحقق إن الأب مرتبط بالطالب
+    $this->authorizeParentAccess($request, $student->id);
 
-        $all     = Attendance::where('student_id', $studentId)->get();
-        $total   = $all->count();
-        $present = $all->where('status', 'present')->count();
+    $history = Attendance::with('class')
+        ->where('student_id', $student->id)
+        ->orderBy('date', 'desc')
+        ->paginate(20);
 
-        return response()->json([
-            'success' => true,
-            'data' => [
-                'summary' => [
-                    'total'           => $total,
-                    'present'         => $present,
-                    'absent'          => $all->where('status', 'absent')->count(),
-                    'late'            => $all->where('status', 'late')->count(),
-                    'attendance_rate' => $total > 0
-                        ? round(($present / $total) * 100, 2) . '%'
-                        : '0%',
-                ],
-                'records' => $history,
+    $all = Attendance::where('student_id', $student->id)->get();
+
+    $total = $all->count();
+
+    $present = $all->where('status', 'present')->count();
+
+    return response()->json([
+        'success' => true,
+        'data' => [
+
+            'student' => $student->student_id,
+
+            'summary' => [
+                'total'   => $total,
+                'present' => $present,
+                'absent'  => $all->where('status', 'absent')->count(),
+                'late'    => $all->where('status', 'late')->count(),
+
+                'attendance_rate' => $total > 0
+                    ? round(($present / $total) * 100, 2) . '%'
+                    : '0%',
             ],
-        ]);
-    }
+
+            'records' => $history,
+        ],
+    ]);
+}
 
     // ──────────────────────────────────────────────────────────────────────
     // GET /parents/{id}/children/{studentId}/grades
     // Parent views their child's grades
     // ──────────────────────────────────────────────────────────────────────
-    public function childGrades(Request $request, int $id, int $studentId): JsonResponse
+    public function childGrades(Request $request, string $id, string $studentId): JsonResponse
     {
         $this->authorizeParentAccess($request, $id, $studentId);
 

@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Models;
+namespace App\Models\ParentModel;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -14,6 +14,9 @@ class ParentModel extends Model
     use HasFactory;
     use Notifiable;
     
+    protected $fillable = ['user_id'];
+    protected $table = 'parents';
+
 
     public function user()
     {

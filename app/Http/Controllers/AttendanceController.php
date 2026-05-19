@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Student;
+namespace App\Http\Controllers;
 
 use App\Notifications\StudentAbsentNotification;
 use Illuminate\Support\Facades\Notification;
@@ -26,27 +26,43 @@ class AttendanceController extends Controller
     // POST /attendance/mark  — Teacher / Admin
     // Bulk-mark attendance for a class session
     // ──────────────────────────────────────────────────────────────────────
-    public function mark(Request $request)
+public function mark(Request $request)
 {
     $request->validate([
-        'student_id' => 'required',
+        'student_code' => 'required',
         'class_id' => 'required',
         'status' => 'required|in:present,absent,late',
     ]);
 
+    $class = ClassModel::findOrFail($request->class_id);
+
+    // صح: نبحث بالكود
+   
+    // هات الطالب باستخدام student_id
+    $student = Student::where('student_id', $request->student_id)
+    ->firstOrFail();
+
+
+       // مهم جدًا: التأكد من الربط
+    if (!$class->students()->where('students.id', $student->id)->exists()) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Student not enrolled in this class'
+        ], 422);
+    }
+
+    // خزّن الـ id الحقيقي
     $attendance = Attendance::create([
-        'student_id' => $request->student_id,
+        'student_id' => $student->id,
         'class_id' => $request->class_id,
         'status' => $request->status,
         'date' => now()->toDateString(),
     ]);
 
-    // 🔥 لو absent ابعت notification
+    // لو غياب ابعت notification
     if ($request->status === 'absent') {
 
-        $student = Student::with('parents')->find($request->student_id);
-
-        if ($student && $student->parents->count() > 0) {
+        if ($student->parents && $student->parents->count() > 0) {
 
             Notification::send(
                 $student->parents,

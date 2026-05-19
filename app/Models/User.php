@@ -7,6 +7,9 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
+use App\Models\Student;
+use App\Models\Teacher;
+use App\Models\ParentModel;
 
 
 class User extends Authenticatable
@@ -41,6 +44,11 @@ class User extends Authenticatable
     public function parent()
     {
         return $this->hasOne(ParentModel::class); // لو الموديل اسمه ParentModel بدل reserved word
+    }
+    
+    public function parentProfile()
+    {
+        return $this->hasOne(ParentModel::class, 'user_id');
     }
 
     public function chatbotConversations()

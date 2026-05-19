@@ -24,16 +24,17 @@ use Illuminate\Database\Eloquent\Model;
         return $this->belongsTo(User::class);
     }
 
-    public function parents()
+    public function ParentController()
     {
         return $this->belongsToMany(ParentModel::class, 'parent_student', 'student_id', 'parent_id');
-         return $this->belongsTo(ParentModel::class, 'parent_id');
+        return $this->belongsTo(ParentModel::class, 'parent_id');
         }
 
-    public function classes()
+    public function classController()
     {
-        return $this->belongsToMany(ClassModel::class, 'class_student', 'student_id', 'class_id');
+        return $this->belongsToMany(ClassModel::class, 'students.class_id', 'student_id', 'class_id');
     }
+    
 
     public function assignments()
     {
