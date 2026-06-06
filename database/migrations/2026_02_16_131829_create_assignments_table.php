@@ -16,7 +16,17 @@ return new class extends Migration
             $table->foreignId('class_id')->constrained('classes')->onDelete('cascade');
             $table->string('title');
             $table->text('description')->nullable();
-            $table->enum('status',['status', ['pending', 'submitted', 'graded']])->default('pending');
+            $table->enum('status', ['pending', 'submitted', 'graded'])
+            ->default('pending');
+            $table->foreignId('teacher_id')->nullable()->constrained()->onDelete('cascade');
+
+            $table->integer('max_score')->default(0);
+
+            $table->string('type')->default('homework');
+
+            $table->boolean('is_published')->default(false);
+
+            $table->string('attachment_path')->nullable();
             $table->date('due_date')->nullable();
             $table->timestamps();
         });

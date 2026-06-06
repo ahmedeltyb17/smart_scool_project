@@ -19,7 +19,7 @@ return new class extends Migration
         $table->unsignedBigInteger('student_id');
 
         // إنشاء الـ Foreign Keys
-        $table->foreign('parent_id')->references('id')->on('Parents')->onDelete('cascade');
+        $table->foreign('parent_id')->references('id')->on('parents')->onDelete('cascade');
         $table->foreign('student_id')->references('id')->on('students')->onDelete('cascade');
 
         $table->timestamps();

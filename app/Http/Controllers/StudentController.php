@@ -1,14 +1,16 @@
 <?php
 
-namespace App\Http\Controllers\Student;
+namespace App\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\Student;
 use App\Models\User;
+use Illuminate\Support\Facades\App;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rules\Password;
+
 
 /**
  * StudentController
@@ -63,7 +65,7 @@ class StudentController extends Controller
             'name'           => ['required', 'string', 'max:255'],
             'email'          => ['required', 'string', 'email', 'unique:users'],
             'password'       => ['required', Password::min(8)->mixedCase()->numbers()],
-            'student_code'   => ['required', 'string', 'unique:students'],
+            'student_id'   => ['required', 'string', 'unique:students'],
             'class_id'       => ['required', 'integer', 'exists:classes,id'],
             'grade'          => ['required', 'string', 'max:50'],
             'date_of_birth'  => ['nullable', 'date'],
@@ -82,13 +84,17 @@ class StudentController extends Controller
                 'is_active' => true,
             ]);
 
-            $student = Student::create([
-                'user_id'       => $user->id,
-                'student_code'  => $data['student_code'],
-                'class_id'      => $data['class_id'],
-                'grade'         => $data['grade'],
-                'enrolled_at'   => $data['enrolled_at'] ?? now(),
-            ]);
+          $lastId = Student::max('id') ?? 0;
+
+        $studentId = 'STD-' . str_pad($lastId + 1, 4, '0', STR_PAD_LEFT);
+
+        $student = Student::create([
+            'user_id'      => $user->id,
+            'class_id'     => $data['class_id'],
+            'student_id'   => $studentId,
+            'grade'        => $data['grade'],
+            'enrolled_at'  => $data['enrolled_at'] ?? now(),
+]);
 
             DB::commit();
 
@@ -180,3 +186,4 @@ class StudentController extends Controller
         ]);
     }
 }
+

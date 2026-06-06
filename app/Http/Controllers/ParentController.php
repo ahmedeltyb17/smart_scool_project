@@ -15,6 +15,12 @@ use App\Models\ClassModel;
 use App\Models\Parent_Student;
 use Illuminate\support\Facades\Hash;
 use App\Models\ParentModel;
+use App\Http\Controllers\Auth\AuthController;
+use App\Http\Controllers\StudentController;
+use App\Http\Controllers\ClassController;
+use App\Http\Controllers\QuizController;
+use App\Http\Controllers\QuizResultController;
+
 /**
  * ParentController
  *
@@ -35,7 +41,7 @@ class ParentController extends Controller
     // ──────────────────────────────────────────────────────────────────────
     public function index(Request $request): JsonResponse
     {
-        $parents = ParentModel::with(['user', 'students.user'])
+        $parents = \App\Models\ParentModel::with(['user', 'students.user'])
             ->when($request->search, fn ($q) =>
                 $q->whereHas('user', fn ($u) =>
                     $u->where('name', 'like', "%{$request->search}%")
@@ -56,7 +62,7 @@ class ParentController extends Controller
     
     public function profile(Request $request): JsonResponse
 {
-    $parent = ParentModel::with([
+    $parent = \App\Models\ParentModel::with([
         'user',
         'students.user',
         'students.classes'
@@ -298,6 +304,67 @@ class ParentController extends Controller
             ],
         ]);
     }
+
+
+
+    // ──────────────────────────────────────────────────────────────────────
+    // children/{studentId}/quizzes
+    // Parent views quizzes for their child     
+     public function childQuizzes(Request $request): JsonResponse
+    {
+        $parent = $request->user()->parent;
+
+        if (!$parent) {
+            return response()->json([
+                'success' => false,
+                'message' => 'User is not a parent'
+            ], 403);
+        }
+
+        $student = $parent->students()->first();
+
+        if (!$student) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No child found'
+            ], 404);
+        }
+
+        $quizzes = Quiz::where('class_id', $student->class_id)->get();
+
+        return response()->json([
+            'success' => true,
+            'student_name' => $student->user->name,
+            'data' => $quizzes
+        ]);
+    }
+
+
+
+    /////// child results for quizzes
+    public function childResults(Request $request): JsonResponse
+{
+    $parent = $request->user()->parent;
+
+    if (!$parent) {
+        return response()->json([
+            'success' => false,
+            'message' => 'User is not a parent'
+        ], 403);
+    }
+
+    $studentIds = $parent->students()->pluck('students.id');
+
+    $results = QuizResult::with(['quiz', 'student.user'])
+        ->whereIn('student_id', $studentIds)
+        ->get();
+
+    return response()->json([
+        'success' => true,
+        'data' => $results
+    ]);
+}
+
 
     // ── Private Helpers ────────────────────────────────────────────────────
 

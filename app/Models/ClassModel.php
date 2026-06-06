@@ -10,19 +10,20 @@ class ClassModel extends Model
     use HasFactory;
     protected $table = 'classes';
 
+
     public function teacher()
     {
-        return $this->belongsTo(Teacher::class);
+        return $this->belongsTo(Teacher::class, 'teacher_id');
     }
 
     public function students()
     {
-        return $this->belongsToMany(Student::class, 'students.class_id', 'class_id', 'student_id');
+        return $this->hasMany(Student::class, 'class_id');
     }
 
     public function assignments()
     {
-        return $this->hasMany(Assignment::class);
+        return $this->hasMany(Assignment::class, 'class_id');
     }
 }
 

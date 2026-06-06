@@ -11,6 +11,7 @@ use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\ValidationException;
 use App\Models\Student;
 use App\Models\Teacher;
+use App\Models\ClassModel;
 use App\Models\ParentModel;
 
 /**
@@ -99,33 +100,64 @@ class RegisteredUserController extends Controller
     ]);
 
     // 🔥 الحل هنا
-    if ($data['role'] === 'students') {
+    
+    // teacher
+if ($data['role'] === 'teacher') {
+    Teacher::create([
+        'user_id' => $user->id
+    ]);
+}
 
-        $student = new Student();
-        $student->user_id = $user->id;
-        $student->save();
+// parent
+if ($data['role'] === 'parent') {
+    ParentModel::create([
+        'user_id' => $user->id
+    ]);
+}
 
+// student
+if ($data['role'] === 'student') {
+
+    // 1. get class with < 30 students
+    $class = ClassModel::withCount('students')
+        ->having('students_count', '<', 30)
+        ->first();
+
+    // 2. create new class if none exists
+    if (!$class) {
+        $teacher = Teacher::first();
+
+        $class = ClassModel::create([
+            'name' => 'Class ' . (ClassModel::count() + 1),
+            'teacher_id' => $teacher->id,
+        ]);
     }
 
-    if ($data['role'] === 'teacher') {
+    // 3. generate student_id safely
+    $lastStudent = Student::orderBy('id', 'desc')->first();
 
-        $teacher = new Teacher();
-        $teacher->user_id = $user->id;
-        $teacher->save();
-    }
-    if ($data['role'] === 'parents') {
+    $number = $lastStudent
+        ? ((int) str_replace('STD-', '', $lastStudent->student_id)) + 1
+        : 1;
 
-        $parent = new ParentModel();
-        $parent->user_id = $user->id;
-        $parent->save();
-    }
+    $studentId = 'STD-' . str_pad($number, 4, '0', STR_PAD_LEFT);
+
+    // 4. create student
+    Student::create([
+        'user_id'    => $user->id,
+        'class_id'   => $class->id,
+        'student_id' => $studentId,
+    ]);
+}
 
     return response()->json([
         'success' => true,
         'message' => 'User registered successfully.',
         'data'    => ['user' => $user],
     ], 201);
+    
 }
+
     // ──────────────────────────────────────────────────────────────────────
     // POST /api/v1/auth/logout
     // ──────────────────────────────────────────────────────────────────────

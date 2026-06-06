@@ -50,6 +50,7 @@ class GradeController extends Controller
     //------------------------------------
     public function myGrades(Request $request)
 {
+    
     $student = $request->user()->student;
 
     $grades = Grade::with('assignment')

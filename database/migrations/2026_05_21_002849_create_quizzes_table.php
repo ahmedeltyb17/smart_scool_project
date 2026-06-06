@@ -11,19 +11,29 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('classes', function (Blueprint $table) {
+        Schema::create('quizzes', function (Blueprint $table) {
             $table->id();
-            $table->string('name');
-            $table->string('description')->nullable();
-            $table->timestamps();
-        });
-    }   
+
+    $table->foreignId('class_id')->constrained()->onDelete('cascade');
+
+    $table->string('title');
+
+    $table->text('description')->nullable();
+
+    $table->date('quiz_date');
+
+    $table->integer('total_marks');
+
+    $table->timestamps();
+});
+
+    }
 
     /**
      * Reverse the migrations.
      */
     public function down(): void
     {
-        Schema::dropIfExists('classes');
+        Schema::dropIfExists('quizzes');
     }
 };

@@ -11,6 +11,7 @@ use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\ValidationException;
 use App\Models\Student;
 use App\Models\Teacher;
+use App\Models\ClassModel;
 use App\Models\ParentModel;
 
 /**
@@ -25,50 +26,51 @@ class AuthController extends Controller
     // POST /api/v1/auth/login
     // ──────────────────────────────────────────────────────────────────────
     public function login(Request $request): JsonResponse
-    {
-        $credentials = $request->validate([
-            'email'    => ['required', 'string', 'email'],
-            'password' => ['required', 'string'],
-        ]);
+{
+    $credentials = $request->validate([
+        'email'    => ['required', 'string', 'email'],
+        'password' => ['required', 'string'],
+    ]);
 
-        $user = User::where('email', $credentials['email'])->first();
+    $user = User::where('email', $credentials['email'])->first();
 
-        if (! $user || ! Hash::check($credentials['password'], $user->password)) {
-            throw ValidationException::withMessages([
-                'email' => ['The provided credentials are incorrect.'],
-            ]);
-        }
-
-        if (! $user->is_active) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Your account has been deactivated. Contact your administrator.',
-            ], 403);
-        }
-
-        // Single-session policy: revoke previous tokens
-        $user->tokens()->delete();
-
-        $token = $user->createToken('api-token')->plainTextToken;
-
-        // Eager-load the correct profile relation based on role
-        $profile = match ($user->role) {
-            'student' => $user->load('student'),
-            'teacher' => $user->load('teacher'),
-            'parent'  => $user->load('parentProfile'),
-            default   => $user,
-        };
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Login successful.',
-            'data' => [
-                'user'       => $profile,
-                'token'      => $token,
-                'token_type' => 'Bearer',
-            ],
+    // 1. check user exists
+    if (! $user) {
+        throw ValidationException::withMessages([
+            'email' => ['No account found with this email.'],
         ]);
     }
+
+    // 2. check password
+    if (! Hash::check($credentials['password'], $user->password)) {
+        throw ValidationException::withMessages([
+            'password' => ['The password is incorrect.'],
+        ]);
+    }
+
+    // 3. check active status
+    if (! $user->is_active) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Your account has been deactivated. Contact your administrator.',
+        ], 403);
+    }
+
+    // 4. delete old tokens (single session)
+    $user->tokens()->delete();
+
+    // 5. create token
+    $token = $user->createToken('api-token')->plainTextToken;
+
+    return response()->json([
+        'success' => true,
+        'message' => 'Login successful.',
+        'data' => [
+            'user'  => $user,
+            'token' => $token,
+        ],
+    ]);
+}
 
     // ──────────────────────────────────────────────────────────────────────
     // POST /api/v1/auth/register  (Admin-only in production)
@@ -94,30 +96,64 @@ class AuthController extends Controller
             'is_active' => true,
         ]);
 
-        if ($data['role'] === 'student') {
-        Student::create([
-            'user_id' => $user->id
+       
+// teacher
+if ($data['role'] === 'teacher') {
+    Teacher::create([
+        'user_id' => $user->id
+    ]);
+}
+
+// parent
+if ($data['role'] === 'parent') {
+    ParentModel::create([
+        'user_id' => $user->id
+    ]);
+}
+
+// student
+if ($data['role'] === 'student') {
+
+    // 1. get class with < 30 students
+    $class = ClassModel::withCount('students')
+        ->having('students_count', '<', 30)
+        ->first();
+
+    // 2. create new class if none exists
+    if (!$class) {
+        $teacher = Teacher::first();
+
+        $class = ClassModel::create([
+            'name' => 'Class ' . (ClassModel::count() + 1),
+            'teacher_id' => $teacher->id,
         ]);
     }
 
-    if ($data['role'] === 'teacher') {
-        Teacher::create([
-            'user_id' => $user->id
-        ]);
-    }
-    if ($data['role'] === 'parent') {
-        ParentModel::create([
-            'user_id' => $user->id
-        ]);
-    }
+    // 3. generate student_id safely
+    $lastStudent = Student::orderBy('id', 'desc')->first();
 
+    $number = $lastStudent
+        ? ((int) str_replace('STD-', '', $lastStudent->student_id)) + 1
+        : 1;
+
+    $studentId = 'STD-' . str_pad($number, 4, '0', STR_PAD_LEFT);
+
+    // 4. create student
+    Student::create([
+        'user_id'    => $user->id,
+        'class_id'   => $class->id,
+        'student_id' => $studentId,
+    ]);
+}
         return response()->json([
             'success' => true,
             'message' => 'User registered successfully.',
             'data'    => ['user' => $user],
         ], 201);
+        
     }
 
+    
     // ──────────────────────────────────────────────────────────────────────
     // POST /api/v1/auth/logout
     // ──────────────────────────────────────────────────────────────────────
@@ -132,16 +168,19 @@ class AuthController extends Controller
     }
 
     // ──────────────────────────────────────────────────────────────────────
-    // GET /api/v1/auth/me
+    // GET /api/v1/auth/getprofile
     // ──────────────────────────────────────────────────────────────────────
-    public function me(Request $request): JsonResponse
+    public function getProfile(Request $request): JsonResponse
     {
         $user = $request->user();
 
         $profile = match ($user->role) {
-            'student' => $user->load('student.class'),
+            'student' => $user->load(['student.class', 'student.grades']),
             'teacher' => $user->load('teacher.classes'),
-            'parent'  => $user->load('parentProfile.students.user'),
+            'parent' => $user->load([
+            'parentProfile.students.user',
+            'parentProfile.students.grades'
+]),
             default   => $user,
         };
 
