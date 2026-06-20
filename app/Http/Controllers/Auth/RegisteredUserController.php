@@ -104,9 +104,13 @@ class RegisteredUserController extends Controller
     // teacher
 if ($data['role'] === 'teacher') {
     Teacher::create([
-        'user_id' => $user->id
+        'user_id' => $user->id,
+        'name'    => $user->name,
+        'email'   => $user->email,
+        
     ]);
 }
+
 
 // parent
 if ($data['role'] === 'parent') {
@@ -144,10 +148,10 @@ if ($data['role'] === 'student') {
 
     // 4. create student
     Student::create([
-        'user_id'    => $user->id,
-        'class_id'   => $class->id,
-        'student_id' => $studentId,
-    ]);
+    'user_id'    => $user->id,
+    'class_id'   => $class->id,
+    'student_id' => $studentId,
+]);
 }
 
     return response()->json([

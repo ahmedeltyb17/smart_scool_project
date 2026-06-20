@@ -14,9 +14,6 @@ class Assignment extends Model
     'class_id',
     'teacher_id',
     'due_date',
-    'max_score',
-    'type',
-    'is_published',
     'attachment_path'
 ];
 

@@ -18,12 +18,12 @@ class Student extends Model
     protected $table = 'students';
 
     protected $fillable = [
-        'user_id',
-        'class_id',
-        'grade',
-        'student_code',
-        'enrolled_at'
-    ];
+            'user_id',
+            'class_id',
+            'grade',
+            'student_code',
+            'enrolled_at'
+];
 
     // Auto generate student code
     protected static function booted()

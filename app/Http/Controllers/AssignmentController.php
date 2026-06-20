@@ -7,6 +7,9 @@ use App\Models\Assignment;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
+use App\Models\ClassModel;
+use App\Models\Student;
 
 
 /**
@@ -33,9 +36,8 @@ class AssignmentController extends Controller
 
         if ($user->role === 'student') {
             $classId = $user->student->class_id;
-            $query->where('class_id', $classId)
-                  ->where('is_published', true);
-        }
+            $query->where('class_id', $classId);
+}
 
         $query
             ->when($request->class_id, fn ($q) => $q->where('class_id', $request->class_id))
@@ -61,7 +63,6 @@ class AssignmentController extends Controller
             'due_date'     => ['required', 'date', 'after:today'],
             'max_score'    => ['required', 'numeric', 'min:1', 'max:100'],
             'type'         => ['required', 'in:homework,quiz,project,exam,other'],
-            'is_published' => ['boolean'],
             'attachment'   => ['nullable', 'file', 'max:10240', 'mimes:pdf,doc,docx,ppt,pptx,zip'],
         ]);
 
@@ -87,22 +88,25 @@ class AssignmentController extends Controller
                 ->store('assignments', 'public');
         }
 
+        $path = null;
+
+if ($request->hasFile('attachment')) {
+    $path = $request->file('attachment')
+                    ->store('assignments', 'public');
+}
         $assignment = Assignment::create([
             'title'           => $data['title'],
             'description'     => $data['description'] ?? null,
             'class_id'        => $data['class_id'],
             'teacher_id'      => $data['teacher_id'],
             'due_date'        => $data['due_date'],
-            'max_score'       => $data['max_score'],
-            'type'            => $data['type'],
-            'is_published'    => $data['is_published'] ?? false,
-            'attachment_path' => $data['attachment_path'],
+            'attachment_path' => $path,
         ]);
 
         return response()->json([
             'success' => true,
             'message' => 'Assignment created.',
-            'data'    => ['assignment' => $assignment->load('class', 'teacher.user')],
+            // 'data'    => ['assignment' => $assignment->load('class', 'teacher.user')],
         ], 201);
     }
 
@@ -114,12 +118,6 @@ class AssignmentController extends Controller
         $assignment = Assignment::with(['class', 'teacher.user', 'grades.student.user'])->findOrFail($id);
 
         // Students only see published assignments for their class
-        if ($request->user()->role === 'student') {
-            if (! $assignment->is_published
-                || $assignment->class_id !== $request->user()->student->class_id) {
-                return response()->json(['success' => false, 'message' => 'Not found.'], 404);
-            }
-        }
 
         return response()->json([
             'success' => true,
@@ -146,7 +144,6 @@ class AssignmentController extends Controller
             'description'  => ['nullable', 'string'],
             'due_date'     => ['sometimes', 'date'],
             'max_score'    => ['sometimes', 'numeric', 'min:1', 'max:100'],
-            'is_published' => ['sometimes', 'boolean'],
         ]);
 
         $assignment->update($data);
@@ -183,25 +180,4 @@ class AssignmentController extends Controller
         ]);
     }
 
-    // ──────────────────────────────────────────────────────────────────────
-    // PATCH /assignments/{id}/publish  — Teacher / Admin
-    // ──────────────────────────────────────────────────────────────────────
-    public function publish(Request $request, int $id): JsonResponse
-    {
-        $assignment = Assignment::findOrFail($id);
-
-        if ($request->user()->role === 'teacher'
-            && $assignment->teacher_id !== $request->user()->teacher->id) {
-            return response()->json(['success' => false, 'message' => 'Access denied.'], 403);
-        }
-
-        $assignment->update(['is_published' => ! $assignment->is_published]);
-        $state = $assignment->is_published ? 'published' : 'unpublished';
-
-        return response()->json([
-            'success' => true,
-            'message' => "Assignment {$state}.",
-            'data'    => ['is_published' => $assignment->is_published],
-        ]);
-    }
 }

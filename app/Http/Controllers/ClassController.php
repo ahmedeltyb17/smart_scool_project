@@ -4,11 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\ClassModel;
-use App\Models\Schedules;
+use App\Models\Schedule;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Student;
+use App\Models\Teacher;
 
 /**
  * ClassController
@@ -189,7 +190,7 @@ class ClassController extends Controller
             'room'        => ['nullable', 'string', 'max:50'],
         ]);
 
-        $schedule = Schedules::create([
+        $schedule = Schedule::create([
             'class_id'    => $id,
             'day_of_week' => $data['day_of_week'],
             'start_time'  => $data['start_time'],
@@ -203,4 +204,52 @@ class ClassController extends Controller
             'data'    => ['schedule' => $schedule],
         ], 201);
     }
+
+    public function teacherClasses(Request $request): JsonResponse
+{
+    $teacher = $request->user()->teacher;
+
+    $classes = ClassModel::withCount('students')
+        ->where('teacher_id', $teacher->id)
+        ->get();
+
+    return response()->json([
+        'success' => true,
+        'data' => $classes
+    ]);
+}
+
+public function classStudents(Request $request, int $classId): JsonResponse
+{
+    $teacher = $request->user()->teacher;
+
+    $class = ClassModel::with([
+        'students.user',
+        'students.attendances' => function ($query) {
+            $query->whereDate('date', today());
+        }
+    ])
+    ->where('teacher_id', $teacher->id)
+    ->findOrFail($classId);
+
+    $students = $class->students->map(function ($student) {
+
+        $attendance = $student->attendances->first();
+
+        return [
+            'student_id' => $student->student_id,
+            'student_name' => $student->user->name,
+            'status' => $attendance?->status ?? 'not_marked',
+        ];
+    });
+
+    return response()->json([
+        'success' => true,
+        'data' => [
+            'class_id' => $class->id,
+            'class_name' => $class->name,
+            'students' => $students
+        ]
+    ]);
+}
 }

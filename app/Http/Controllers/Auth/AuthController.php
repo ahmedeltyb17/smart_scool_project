@@ -100,8 +100,10 @@ class AuthController extends Controller
 // teacher
 if ($data['role'] === 'teacher') {
     Teacher::create([
-        'user_id' => $user->id
-    ]);
+    'name' => $request->name,
+    'email' => $request->email,
+    'user_id' => $user->id,
+]);
 }
 
 // parent
@@ -171,24 +173,53 @@ if ($data['role'] === 'student') {
     // GET /api/v1/auth/getprofile
     // ──────────────────────────────────────────────────────────────────────
     public function getProfile(Request $request): JsonResponse
-    {
-        $user = $request->user();
+{
+    $user = $request->user();
 
-        $profile = match ($user->role) {
-            'student' => $user->load(['student.class', 'student.grades']),
-            'teacher' => $user->load('teacher.classes'),
-            'parent' => $user->load([
+    $profile = match ($user->role) {
+
+        'student' => $user->load([
+            'student.class',
+            'student.grades'
+        ]),
+
+        'teacher' => $user->load([
+            'teacher.classes',
+            'teacher.user'
+        ]),
+
+        'parent' => $user->load([
             'parentProfile.students.user',
             'parentProfile.students.grades'
-]),
-            default   => $user,
-        };
+        ]),
 
-        return response()->json([
-            'success' => true,
-            'data'    => ['user' => $profile],
-        ]);
-    }
+        default => $user,
+    };
+
+    return response()->json([
+        'success' => true,
+        'data' => [
+            'user' => [
+                'id' => $profile->id,
+                'name' => $profile->name,
+                'email' => $profile->email,
+                'role' => $profile->role,
+
+                // 👇 role-specific data
+                'teacher' => $profile->teacher ? [
+                    'teacher_id' => $profile->teacher->id,
+                    'classes' => $profile->teacher->classes,
+                    'subject'    => $profile->teacher->subject,
+                ] : null,
+
+                'student' => $profile->student ?? null,
+                'parent' => $profile->parentProfile ?? null,
+                'phone'       => $profile->phone,
+                'address'     => $profile->address,
+            ]
+        ],
+    ]);
+}
 
     // ──────────────────────────────────────────────────────────────────────
     // PUT /api/v1/auth/profile

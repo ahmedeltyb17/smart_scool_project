@@ -8,7 +8,12 @@ use Illuminate\Database\Eloquent\Model;
 class Teacher extends Model
 {
     use HasFactory;
-    protected $fillable = ['user_id'];
+    protected $fillable = [
+    'user_id',
+    'subject',
+    'name',
+    'email'
+];
 
     public function user()
     {
@@ -19,5 +24,10 @@ class Teacher extends Model
     {
         return $this->hasMany(ClassModel::class);
     }
+    
+    public function schedules()
+{
+        return $this->hasMany(Schedule::class);
+}
 }
 

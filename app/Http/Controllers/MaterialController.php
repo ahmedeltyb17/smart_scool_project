@@ -22,34 +22,46 @@ class MaterialController extends Controller
     // GET /materials
     // ──────────────────────────────────────────────────────────────────────
     public function index(Request $request): JsonResponse
-    {
-        $user  = $request->user();
-        $query = Material::with(['class', 'teacher.user']);
+{
+    $user = $request->user();
 
-        if ($user->role === 'teacher') {
-            $query->where('teacher_id', $user->teacher->id);
-        }
+    $query = Material::with(['class', 'teacher.user']);
 
-        if ($user->role === 'student') {
-            $query->where('class_id', $user->student->class_id)
-                  ->where('is_published', true);
-        }
-
-        $query
-            ->when($request->class_id, fn ($q) => $q->where('class_id', $request->class_id))
-            ->when($request->type,     fn ($q) => $q->where('type', $request->type))
-            ->when($request->search,   fn ($q) =>
-                $q->where('title', 'like', "%{$request->search}%")
-                  ->orWhere('description', 'like', "%{$request->search}%")
-            )
-            ->orderBy('created_at', 'desc');
-
-        return response()->json([
-            'success' => true,
-            'data'    => $query->paginate($request->per_page ?? 15),
-        ]);
+    if ($user->role === 'student') {
+        $query->where('class_id', $user->student->class_id);
     }
 
+    if ($user->role === 'teacher') {
+        $query->where('teacher_id', $user->teacher->id);
+    }
+
+    $materials = $query->orderBy('created_at', 'desc')->get();
+
+    if ($materials->isEmpty()) {
+    return response()->json([
+        'success' => true,
+        'message' => 'No materials found',
+        'data' => []
+    ], 200);
+}
+
+
+    $data = $materials->map(function ($material) {
+        return [
+            'id' => $material->id,
+            'title' => $material->title,
+            'file_url' => asset('storage/' . $material->file_path),
+            'class_name' => $material->class->name ?? null,
+            'teacher_name' => $material->teacher->name ?? null,
+        ];
+    });
+
+    return response()->json([
+        'success' => true,
+        'message' => 'Materials fetched successfully',
+        'data' => $data
+    ]);
+}
     // ──────────────────────────────────────────────────────────────────────
     // POST /materials  — Teacher / Admin
     // ──────────────────────────────────────────────────────────────────────
@@ -57,10 +69,7 @@ class MaterialController extends Controller
     {
         $data = $request->validate([
             'title'        => ['required', 'string', 'max:255'],
-            'description'  => ['nullable', 'string'],
             'class_id'     => ['required', 'integer', 'exists:classes,id'],
-            'type'         => ['required', 'in:document,video,link,image,other'],
-            'is_published' => ['boolean'],
             'external_url' => ['nullable', 'url', 'required_if:type,link,video'],
             'file'         => ['nullable', 'file', 'max:51200',
                                'mimes:pdf,doc,docx,ppt,pptx,xls,xlsx,jpg,jpeg,png,mp4,zip'],
@@ -76,20 +85,16 @@ class MaterialController extends Controller
 
         $material = Material::create([
             'title'        => $data['title'],
-            'description'  => $data['description'] ?? null,
             'class_id'     => $data['class_id'],
             'teacher_id'   => $teacherId,
-            'type'         => $data['type'],
-            'is_published' => $data['is_published'] ?? false,
             'external_url' => $data['external_url'] ?? null,
             'file_path'    => $filePath,
         ]);
 
         return response()->json([
             'success' => true,
-            'message' => 'Material uploaded.',
-            'data'    => ['material' => $material->load('class', 'teacher.user')],
-        ], 201);
+            'message' => 'Material uploaded successfully.',
+], 201);
     }
 
     // ──────────────────────────────────────────────────────────────────────
@@ -126,7 +131,6 @@ class MaterialController extends Controller
 
         $data = $request->validate([
             'title'        => ['sometimes', 'string', 'max:255'],
-            'description'  => ['nullable', 'string'],
             'is_published' => ['sometimes', 'boolean'],
             'external_url' => ['nullable', 'url'],
         ]);

@@ -15,7 +15,6 @@ return new class extends Migration
             $table->id();
             $table->foreignId('class_id')->constrained('classes')->onDelete('cascade');
             $table->enum('day',['sunday','Monday','Tuesday','Wednesday','Thursday']);
-            $table->string('subject');
             $table->time('start_time');
             $table->time('end_time');
             $table->timestamps();

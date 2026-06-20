@@ -13,6 +13,7 @@ use Illuminate\Validation\Rules\Password;
 use App\Models\Student;
 use App\Models\ClassModel;
 use App\Models\Parent_Student;
+use App\Models\QuizResult;
 use Illuminate\support\Facades\Hash;
 use App\Models\ParentModel;
 use App\Http\Controllers\Auth\AuthController;
@@ -20,6 +21,7 @@ use App\Http\Controllers\StudentController;
 use App\Http\Controllers\ClassController;
 use App\Http\Controllers\QuizController;
 use App\Http\Controllers\QuizResultController;
+
 
 /**
  * ParentController
@@ -121,12 +123,10 @@ class ParentController extends Controller
 
             // Link children if provided
             if (! empty($data['student_ids'])) {
-                foreach ($data['student_ids'] as $studentId) {
-                $parent->students()
-                ->syncWithoutDetaching($data['student_ids']);
+                $parent->students()->syncWithoutDetaching($data['student_ids']);
 
                 }
-            }
+            
 
             DB::commit();
         } catch (\Throwable $e) {
@@ -167,16 +167,21 @@ class ParentController extends Controller
     // ──────────────────────────────────────────────────────────────────────
     public function linkStudent(Request $request): JsonResponse
 {
-    $parent = $request->user()->parentProfile;
-
-    if ($request->user()->role !== 'parent') {
-    abort(403);
-}
-    $data = $request->validate([
-        'student_id' => ['required', 'string', 'exists:students,student_id'],
+    $request->validate([
+        'student_id' => ['required', 'string'],
     ]);
 
-    $student = Student::where('student_id', $data['student_id'])->first();
+    $parent = $request->user()->parentProfile;
+
+    if (!$parent) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Not a parent account'
+        ], 403);
+    }
+
+    $student = Student::where('student_id', $request->student_id)
+        ->first();
 
     if (!$student) {
         return response()->json([
@@ -202,15 +207,19 @@ class ParentController extends Controller
     // ──────────────────────────────────────────────────────────────────────
     // DELETE /parents/{id}/unlink-student/{studentId}  — Admin only
     // ──────────────────────────────────────────────────────────────────────
-    public function unlinkStudent(Request $request, int $studentId)
+    public function unlinkStudent(Request $request): JsonResponse
 {
+    $request->validate([
+        'student_id' => ['required', 'exists:students,id'],
+    ]);
+
     $parent = $request->user()->parentProfile;
 
-    $parent->students()->detach($studentId);
+    $parent->students()->detach($request->student_id);
 
     return response()->json([
         'success' => true,
-        'message' => 'Student unlinked.'
+        'message' => 'Student unlinked successfully'
     ]);
 }
 
@@ -218,24 +227,26 @@ class ParentController extends Controller
     // GET /parents/{id}/children  — Admin or own Parent
     // List all children linked to this parent
     // ──────────────────────────────────────────────────────────────────────
-    public function children(Request $request, string $id): JsonResponse
-    {
-        $parent = \App\Models\ParentModel::findOrFail($id);
+    public function children(Request $request): JsonResponse
+{
+    $parent = $request->user()->parentProfile;
 
-        if ($request->user()->role === 'parent') {
-            $own = $request->user()->parentProfile;
-            if (! $own || $own->id !== $parent->id) {
-                return response()->json(['success' => false, 'message' => 'Access denied.'], 403);
-            }
-        }
-
-        $students = $parent->students()->with(['user', 'classes'])->get();
-
+    if (!$parent) {
         return response()->json([
-            'success' => true,
-            'data'    => ['children' => $students],
-        ]);
+            'success' => false,
+            'message' => 'Not a parent account'
+        ], 403);
     }
+
+    $students = $parent->students()
+        ->with(['user', 'class'])
+        ->get();
+
+    return response()->json([
+        'success' => true,
+        'data' => $students
+    ]);
+}
 
     // ──────────────────────────────────────────────────────────────────────
     // GET /parents/{id}/children/{studentId}/attendance
@@ -388,5 +399,9 @@ class ParentController extends Controller
             
         }
     }
+
+
+
+    
 
 }

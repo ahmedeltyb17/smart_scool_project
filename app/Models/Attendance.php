@@ -8,6 +8,15 @@ use Illuminate\Database\Eloquent\Model;
 class Attendance extends Model
 {
     use HasFactory;
+    protected $fillable = [
+        'student_id',
+        'class_id',
+        'teacher_id',
+        'date',
+        'status'
+    ];
+
+    
 
     public function student()
     {
@@ -17,6 +26,10 @@ class Attendance extends Model
     public function class()
     {
         return $this->belongsTo(ClassModel::class);
+    }
+      public function teacher()
+    {
+        return $this->belongsTo(Teacher::class);
     }
 }
 

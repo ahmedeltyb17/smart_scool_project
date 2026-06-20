@@ -5,10 +5,15 @@ namespace App\Http\Controllers;
 
 
 
+
 use App\Models\AssignmentSubmission;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Storage;
+use App\Models\Assignment;
+use App\Models\Student;
+use App\Models\ClassModel;
+
 
 class AssignmentSubmissionController extends Controller
 {
@@ -53,12 +58,14 @@ class AssignmentSubmissionController extends Controller
  
  
  //  teacher view all submissions for an assignment
-    public function assignmentSubmissions($id): JsonResponse
+   public function assignmentSubmissions(Request $request): JsonResponse
 {
-    $assignment = Assignment::findOrFail($id);
+    $request->validate([
+        'assignment_id' => 'required|exists:assignments,id'
+    ]);
 
     $submissions = AssignmentSubmission::with('student.user')
-        ->where('assignment_id', $id)
+        ->where('assignment_id', $request->assignment_id)
         ->get();
 
     return response()->json([
@@ -68,24 +75,32 @@ class AssignmentSubmissionController extends Controller
 }
 
 // teacher grade a submission
-public function grade(Request $request, $id): JsonResponse
+public function grade(Request $request): JsonResponse
 {
-    $submission = AssignmentSubmission::findOrFail($id);
-
     $data = $request->validate([
-        'score' => 'required|integer|min:0',
-        'feedback' => 'nullable|string'
+        'assignment_id' => 'required|exists:assignments,id',
+        'student_id'    => 'required|string',
+        'score'         => 'required|integer|min:0',
+        'feedback'      => 'nullable|string'
     ]);
 
+    $student = Student::where('student_id', $data['student_id'])
+        ->firstOrFail();
+
+    $submission = AssignmentSubmission::where('assignment_id', $data['assignment_id'])
+        ->where('student_id', $student->id) // الـ FK الموجود في submissions
+        ->firstOrFail();
+
     $submission->update([
-        'score' => $data['score'],
+        'score'    => $data['score'],
         'feedback' => $data['feedback'] ?? null,
-        'status' => 'graded'
+        'status'   => 'graded'
     ]);
 
     return response()->json([
         'success' => true,
-        'data' => $submission
+        'message' => 'Grade added successfully',
+        'data'    => $submission
     ]);
 }
 
@@ -107,7 +122,7 @@ public function studentSubmissions(Request $request): JsonResponse
 // parent view submissions for their children
 public function parentSubmissions(Request $request): JsonResponse
 {
-    $parent = $request->user()->parent;
+    $parent = $request->user()->parentProfile;
 
     $studentIds = $parent->students()->pluck('students.id');
 
