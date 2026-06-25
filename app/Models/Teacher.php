@@ -12,7 +12,8 @@ class Teacher extends Model
     'user_id',
     'subject',
     'name',
-    'email'
+    'email',
+    'user_id'
 ];
 
     public function user()

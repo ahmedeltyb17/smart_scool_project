@@ -1,0 +1,106 @@
+<div class="dl-root">
+  <div class="dl-overlay" [class.visible]="mobileOpen" (click)="mobileOpen = false"></div>
+
+  <aside class="dl-sidebar" #sidebar
+         [class.dl-collapsed]="collapsed"
+         [class.dl-mobile-open]="mobileOpen">
+
+    <div class="dl-brand">
+      <div class="dl-logo-mark"><i class="fas fa-school"></i></div>
+      <div class="dl-brand-text" *ngIf="showLabels">
+        <span class="dl-her">Smart</span><span class="dl-pow">School</span>
+        <small>Admin Dashboard</small>
+      </div>
+    </div>
+
+    <nav class="dl-nav">
+      <a class="dl-link" routerLink="/dashboard" routerLinkActive="active"
+         [routerLinkActiveOptions]="{exact:true}" (click)="onNavClick()">
+        <i class="fas fa-chart-pie"></i>
+        <span *ngIf="showLabels">Overview</span>
+      </a>
+      <a class="dl-link" routerLink="/dashboard/classes" routerLinkActive="active" (click)="onNavClick()">
+        <i class="fas fa-school"></i>
+        <span *ngIf="showLabels">Classes</span>
+      </a>
+      <a class="dl-link" routerLink="/dashboard/teachers" routerLinkActive="active" (click)="onNavClick()">
+        <i class="fas fa-chalkboard-user"></i>
+        <span *ngIf="showLabels">Teachers</span>
+      </a>
+      <a class="dl-link" routerLink="/dashboard/students" routerLinkActive="active" (click)="onNavClick()">
+        <i class="fas fa-users"></i>
+        <span *ngIf="showLabels">Students & Parents</span>
+      </a>
+      <a class="dl-link" routerLink="/dashboard/schedule" routerLinkActive="active" (click)="onNavClick()">
+        <i class="fas fa-calendar-week"></i>
+        <span *ngIf="showLabels">Timetable</span>
+      </a>
+      <a class="dl-link dl-link-badge" routerLink="/dashboard/attendance" routerLinkActive="active" (click)="onNavClick()">
+        <i class="fas fa-clipboard-check"></i>
+        <span *ngIf="showLabels">Attendance</span>
+        <span class="dl-badge" *ngIf="pendingAttendanceCount > 0 && showLabels">{{ pendingAttendanceCount }}</span>
+        <span class="dl-dot"   *ngIf="pendingAttendanceCount > 0 && !showLabels"></span>
+      </a>
+      <a class="dl-link" routerLink="/dashboard/grades" routerLinkActive="active" (click)="onNavClick()">
+        <i class="fas fa-award"></i>
+        <span *ngIf="showLabels">Grades</span>
+      </a>
+      <a class="dl-link" routerLink="/dashboard/tasks" routerLinkActive="active" (click)="onNavClick()">
+        <i class="fas fa-book-open"></i>
+        <span *ngIf="showLabels">Quizzes & Tasks</span>
+      </a>
+      <a class="dl-link" routerLink="/dashboard/materials" routerLinkActive="active" (click)="onNavClick()">
+        <i class="fas fa-folder-open"></i>
+        <span *ngIf="showLabels">Materials</span>
+      </a>
+      <a class="dl-link" routerLink="/dashboard/settings" routerLinkActive="active" (click)="onNavClick()">
+        <i class="fas fa-gear"></i>
+        <span *ngIf="showLabels">Settings</span>
+      </a>
+    </nav>
+
+    <div class="dl-bottom">
+      <button class="dl-link dl-logout" (click)="logout()">
+        <i class="fas fa-right-from-bracket"></i>
+        <span *ngIf="showLabels">Logout</span>
+      </button>
+    </div>
+
+    <button class="dl-collapse-btn" (click)="toggleDesktop()" *ngIf="!isMobile">
+      <i class="fas" [class.fa-chevron-right]="collapsed" [class.fa-chevron-left]="!collapsed"></i>
+    </button>
+  </aside>
+
+  <main class="dl-main" [class.dl-main-collapsed]="collapsed && !isMobile">
+    <header class="dl-topbar">
+      <div class="dl-topbar-left">
+        <button class="dl-hamburger" (click)="toggleSidebar()">
+          <i class="fas fa-bars"></i>
+        </button>
+        <div class="dl-breadcrumb">
+          <i class="fas fa-shield-halved"></i>
+          <span>Admin Panel</span>
+        </div>
+      </div>
+      <div class="dl-topbar-right">
+        <div class="dl-notif" *ngIf="pendingAttendanceCount > 0" routerLink="/dashboard/attendance">
+          <i class="fas fa-bell"></i>
+          <span class="dl-notif-count">{{ pendingAttendanceCount }}</span>
+        </div>
+        <div class="dl-admin-badge">
+          <img *ngIf="adminAvatar" [src]="adminAvatar" alt="admin" />
+          <div *ngIf="!adminAvatar" class="ds-avatar-placeholder">
+            <i class="fas fa-user"></i>
+          </div>
+          <div class="dl-admin-info" *ngIf="!isMobile">
+            <div class="dl-admin-name">{{ adminName }}</div>
+            <div class="dl-admin-role">{{ adminRole }}</div>
+          </div>
+        </div>
+      </div>
+    </header>
+    <div class="dl-content">
+      <router-outlet />
+    </div>
+  </main>
+</div>

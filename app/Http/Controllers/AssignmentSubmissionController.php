@@ -51,10 +51,19 @@ class AssignmentSubmissionController extends Controller
         ]);
 
         return response()->json([
-            'success' => true,
-            'data' => $submission
-        ], 201);
-    }
+    'success' => true,
+    'data' => [
+        'assignment_id' => $submission->assignment_id,
+        'student_id' => $submission->student_id,
+        'file_path' => asset('storage/' . $submission->file_path),
+        'status' => $submission->status,
+        'created_at' => $submission->created_at,
+        'updated_at' => $submission->updated_at,
+        'id' => $submission->id,
+    ]
+], 201);
+    
+}
  
  
  //  teacher view all submissions for an assignment
@@ -66,7 +75,18 @@ class AssignmentSubmissionController extends Controller
 
     $submissions = AssignmentSubmission::with('student.user')
         ->where('assignment_id', $request->assignment_id)
-        ->get();
+        ->get()
+        ->map(function ($submission) {
+
+    return [
+        'student_id'   => $submission->student->student_id,
+        'student_name' => $submission->student->user->name,
+        'status'       => $submission->status,
+        'score'        => $submission->score,
+        'feedback'     => $submission->feedback,
+        'file_path'     => asset('storage/' . $submission->file_path),
+    ];
+});
 
     return response()->json([
         'success' => true,
@@ -83,13 +103,26 @@ public function grade(Request $request): JsonResponse
         'score'         => 'required|integer|min:0',
         'feedback'      => 'nullable|string'
     ]);
+    
+    $student = Student::where('student_id', $data['student_id'])->first();
 
-    $student = Student::where('student_id', $data['student_id'])
-        ->firstOrFail();
+if (!$student) {
+    return response()->json([
+        'success' => false,
+        'message' => 'Student not found'
+    ], 404);
+}
 
-    $submission = AssignmentSubmission::where('assignment_id', $data['assignment_id'])
-        ->where('student_id', $student->id) // الـ FK الموجود في submissions
-        ->firstOrFail();
+$submission = AssignmentSubmission::where('assignment_id', $data['assignment_id'])
+    ->where('student_id', $student->id)
+    ->first();
+
+if (!$submission) {
+    return response()->json([
+        'success' => false,
+        'message' => 'Submission not found'
+    ], 404);
+}
 
     $submission->update([
         'score'    => $data['score'],
@@ -118,6 +151,36 @@ public function studentSubmissions(Request $request): JsonResponse
         'data' => $submissions
     ]);
 }
+public function StudentGrades(Request $request): JsonResponse
+{
+    $student = $request->user()->student;
+
+    if (!$student) {
+        return response()->json([
+            'success' => false,
+            'message' => 'This user is not linked to a student record'
+        ], 404);
+    }
+
+    $grades = AssignmentSubmission::with('assignment')
+        ->where('student_id', $student->id)
+        ->get()
+        ->map(function ($submission) {
+
+            return [
+                'assignment_title' => $submission->assignment->title ?? 'N/A',
+                'score' => $submission->score,
+                'feedback' => $submission->feedback,
+                'status' => $submission->status,
+                'submitted_at' => $submission->created_at->format('Y-m-d H:i'),
+            ];
+        });
+
+    return response()->json([
+        'success' => true,
+        'data' => $grades
+    ]);
+}
 
 // parent view submissions for their children
 public function parentSubmissions(Request $request): JsonResponse
@@ -138,4 +201,6 @@ public function parentSubmissions(Request $request): JsonResponse
         'data' => $submissions
     ]);
 }
+
+
 }

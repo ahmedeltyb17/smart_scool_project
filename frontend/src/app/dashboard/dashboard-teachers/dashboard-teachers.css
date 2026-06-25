@@ -1,0 +1,188 @@
+.dt-wrap { display: flex; flex-direction: column; gap: 22px; min-width: 0; }
+
+/* Header */
+.dt-header { display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+.dt-title { font-size: clamp(20px,3vw,26px); font-weight: 800; color: #f0f0f0; margin: 0; }
+.dt-sub   { font-size: 14px; color: rgba(91,168,192,0.7); margin: 4px 0 0; }
+
+.dt-btn-primary {
+  display: flex; align-items: center; gap: 8px;
+  background: linear-gradient(135deg, #D4667A, #C9A96E);
+  color: #fff; border: none; padding: 11px 18px; border-radius: 12px;
+  font-size: 13.5px; font-weight: 700; cursor: pointer; font-family: inherit;
+}
+.dt-btn-primary:hover { filter: brightness(1.08); }
+
+/* Toolbar */
+.dt-toolbar { display: flex; gap: 10px; flex-wrap: wrap; }
+.dt-search {
+  flex: 1; max-width: 360px; display: flex; align-items: center; gap: 10px;
+  background: rgba(18,25,32,0.8); border: 1px solid rgba(201,169,110,0.15);
+  border-radius: 12px; padding: 10px 14px; color: rgba(200,210,220,0.5);
+}
+.dt-search input { border: none; outline: none; background: none; font-family: inherit; font-size: 13.5px; flex: 1; color: #e0e0e0; }
+.dt-search input::placeholder { color: rgba(200,210,220,0.4); }
+
+.dt-filter {
+  background: rgba(18,25,32,0.8); border: 1px solid rgba(201,169,110,0.15);
+  border-radius: 12px; padding: 10px 14px; color: #d0d5dd; font-family: inherit; font-size: 13px;
+}
+
+/* Table */
+.dt-table-wrap { background: rgba(18,25,32,0.8); border: 1px solid rgba(201,169,110,0.1); border-radius: 18px; overflow-x: auto; }
+.dt-table { width: 100%; border-collapse: collapse; min-width: 680px; }
+.dt-table th {
+  text-align: right; font-size: 12px; font-weight: 700; color: rgba(200,210,220,0.5);
+  padding: 14px 18px; border-bottom: 1px solid rgba(201,169,110,0.1); white-space: nowrap;
+}
+.dt-table td { padding: 13px 18px; border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 13.5px; color: #d0d5dd; }
+.dt-table tr:last-child td { border-bottom: none; }
+.dt-table tr:hover td { background: rgba(255,255,255,0.02); }
+
+.dt-person { display: flex; align-items: center; gap: 10px; font-weight: 600; color: #f0f0f0; }
+.dt-avatar {
+  width: 32px; height: 32px; border-radius: 50%; flex-shrink: 0;
+  background: linear-gradient(135deg, rgba(212,102,122,0.3), rgba(201,169,110,0.3));
+  border: 1.5px solid rgba(201,169,110,0.4);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12.5px; font-weight: 800; color: #C9A96E;
+}
+
+/* Status pill */
+.dt-pill { font-size: 11.5px; font-weight: 700; padding: 4px 12px; border-radius: 999px; display: inline-block; }
+.dt-pill.green  { background: rgba(91,168,192,0.15); color: #5BA8C0; }
+.dt-pill.orange { background: rgba(201,169,110,0.15); color: #C9A96E; }
+.dt-pill.red    { background: rgba(212,102,122,0.15); color: #D4667A; }
+
+/* Row actions */
+.dt-row-actions { display: flex; gap: 2px; }
+.dt-icon-btn { width: 30px; height: 30px; border-radius: 8px; border: none; background: transparent; color: rgba(200,210,220,0.5); cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.dt-icon-btn:hover { background: rgba(255,255,255,0.06); color: #d0d5dd; }
+.dt-icon-btn.dt-danger:hover { color: #D4667A; background: rgba(212,102,122,0.1); }
+
+/* Empty */
+.dt-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 50px 20px; color: rgba(200,210,220,0.4); gap: 10px; }
+.dt-empty i { font-size: 26px; }
+.dt-empty p { font-size: 13.5px; margin: 0; }
+
+/* Modal */
+.dt-modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(3px);
+  display: flex; align-items: center; justify-content: center; z-index: 200; padding: 20px;
+}
+.dt-modal {
+  background: #121920; border: 1px solid rgba(201,169,110,0.2); border-radius: 18px;
+  padding: 28px; max-width: 360px; width: 100%; position: relative; text-align: center;
+}
+.dt-modal-close {
+  position: absolute; top: 14px; left: 14px; background: none; border: none;
+  color: rgba(200,210,220,0.5); font-size: 16px; cursor: pointer;
+}
+.dt-modal-avatar {
+  width: 64px; height: 64px; border-radius: 50%; margin: 0 auto 14px;
+  background: linear-gradient(135deg, rgba(212,102,122,0.3), rgba(201,169,110,0.3));
+  border: 2px solid rgba(201,169,110,0.4);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px; font-weight: 800; color: #C9A96E;
+}
+.dt-modal h3 { font-size: 17px; color: #f0f0f0; margin: 0 0 4px; }
+.dt-modal-subject { font-size: 13px; color: #5BA8C0; margin: 0 0 18px; }
+.dt-modal-info { display: flex; flex-direction: column; gap: 10px; text-align: right; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 16px; }
+.dt-modal-info div { font-size: 13px; color: #c8d0d8; display: flex; align-items: center; gap: 8px; }
+.dt-modal-info i { color: rgba(201,169,110,0.6); width: 16px; }
+
+/* Responsive */
+@media (max-width: 480px) {
+  .dt-header { flex-direction: column; align-items: flex-start; }
+  .dt-btn-primary { width: 100%; justify-content: center; }
+  .dt-toolbar { flex-direction: column; }
+  .dt-search { max-width: none; }
+}
+
+/* ══ ADD TEACHER MODAL ══ */
+.dt-add-modal {
+  background: #121920; border: 1px solid rgba(201,169,110,0.2); border-radius: 20px;
+  padding: 28px; width: 100%; max-width: 560px; position: relative;
+}
+.dt-add-modal-header {
+  display: flex; align-items: center; justify-content: space-between; margin-bottom: 22px;
+}
+.dt-add-modal-header h3 {
+  font-size: 16px; font-weight: 800; color: #f0f0f0; margin: 0;
+  display: flex; align-items: center; gap: 8px;
+}
+.dt-add-modal-header h3 i { color: #C9A96E; }
+
+/* Form layout */
+.dt-form { display: flex; flex-direction: column; gap: 16px; }
+.dt-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.dt-field { display: flex; flex-direction: column; gap: 6px; }
+.dt-field label { font-size: 12px; font-weight: 700; color: rgba(200,210,220,0.6); }
+.dt-req { color: #D4667A; }
+.dt-optional { font-weight: 400; opacity: .6; }
+.dt-field input,
+.dt-field select {
+  background: rgba(8,12,16,0.6); border: 1px solid rgba(201,169,110,0.18);
+  border-radius: 10px; padding: 10px 13px; color: #e0e0e0;
+  font-family: inherit; font-size: 13.5px; outline: none; transition: border-color .2s;
+}
+.dt-field input:focus,
+.dt-field select:focus { border-color: rgba(201,169,110,0.45); }
+.dt-field input::placeholder { color: rgba(200,210,220,0.3); }
+.dt-field select option { background: #121920; }
+
+/* Checkboxes */
+.dt-checkboxes {
+  display: flex; flex-wrap: wrap; gap: 8px;
+  background: rgba(8,12,16,0.4); border: 1px solid rgba(201,169,110,0.12);
+  border-radius: 12px; padding: 12px;
+}
+.dt-check-item {
+  display: flex; align-items: center; gap: 7px;
+  cursor: pointer; font-size: 12.5px; color: rgba(200,210,220,0.75);
+  padding: 5px 10px; border-radius: 8px; transition: background .15s;
+}
+.dt-check-item:hover { background: rgba(201,169,110,0.06); }
+.dt-check-item input[type="checkbox"] { display: none; }
+.dt-check-box {
+  width: 16px; height: 16px; border-radius: 5px; flex-shrink: 0;
+  border: 1.5px solid rgba(201,169,110,0.3); background: transparent;
+  transition: .2s; position: relative;
+}
+.dt-check-item input:checked ~ .dt-check-box {
+  background: linear-gradient(135deg, #D4667A, #C9A96E);
+  border-color: transparent;
+}
+.dt-check-item input:checked ~ .dt-check-box::after {
+  content: '✓'; position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 10px; color: #fff; font-weight: 900;
+}
+
+/* Error */
+.dt-form-error {
+  display: flex; align-items: center; gap: 7px;
+  background: rgba(212,102,122,0.1); border: 1px solid rgba(212,102,122,0.25);
+  color: #D4667A; font-size: 12.5px; padding: 10px 14px; border-radius: 10px;
+}
+
+/* Actions */
+.dt-form-actions { display: flex; gap: 10px; justify-content: flex-end; padding-top: 4px; }
+.dt-btn-cancel {
+  padding: 10px 20px; border-radius: 10px; border: 1px solid rgba(201,169,110,0.2);
+  background: transparent; color: rgba(200,210,220,0.6); font-family: inherit;
+  font-size: 13.5px; font-weight: 700; cursor: pointer;
+}
+.dt-btn-cancel:hover { background: rgba(255,255,255,0.04); }
+.dt-btn-save {
+  display: flex; align-items: center; gap: 7px;
+  padding: 10px 22px; border-radius: 10px; border: none;
+  background: linear-gradient(135deg, #D4667A, #C9A96E);
+  color: #fff; font-family: inherit; font-size: 13.5px; font-weight: 700; cursor: pointer;
+}
+.dt-btn-save:hover { filter: brightness(1.08); }
+
+@media (max-width: 500px) {
+  .dt-form-row { grid-template-columns: 1fr; }
+  .dt-add-modal { padding: 20px; }
+}

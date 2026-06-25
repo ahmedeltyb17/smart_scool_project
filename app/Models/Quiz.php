@@ -7,11 +7,8 @@ use Illuminate\Database\Eloquent\Model;
 class Quiz extends Model
 {
     protected $fillable = [
-        'class_id',
         'title',
-        'description',
-        'quiz_date',
-        'total_marks'
+        'max_score'
     ];
 
     public function class()

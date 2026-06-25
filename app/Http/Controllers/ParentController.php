@@ -210,19 +210,42 @@ class ParentController extends Controller
     public function unlinkStudent(Request $request): JsonResponse
 {
     $request->validate([
-        'student_id' => ['required', 'exists:students,id'],
+        'student_id' => ['required', 'string'],
     ]);
 
     $parent = $request->user()->parentProfile;
 
-    $parent->students()->detach($request->student_id);
+    if (!$parent) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Not a parent account'
+        ], 403);
+    }
+
+    $student = Student::where('student_id', $request->student_id)
+        ->first();
+
+    if (!$student) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Student not found'
+        ], 404);
+    }
+
+    if (!$parent->students()->where('students.id', $student->id)->exists()) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Student is not linked'
+        ], 422);
+    }
+
+    $parent->students()->detach($student->id);
 
     return response()->json([
         'success' => true,
         'message' => 'Student unlinked successfully'
     ]);
 }
-
     // ──────────────────────────────────────────────────────────────────────
     // GET /parents/{id}/children  — Admin or own Parent
     // List all children linked to this parent

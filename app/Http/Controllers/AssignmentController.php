@@ -113,7 +113,7 @@ if ($request->hasFile('attachment')) {
     // ──────────────────────────────────────────────────────────────────────
     // GET /assignments/{id}
     // ──────────────────────────────────────────────────────────────────────
-    public function show(Request $request, int $id): JsonResponse
+    public function show(Request $request, $id): JsonResponse
     {
         $assignment = Assignment::with(['class', 'teacher.user', 'grades.student.user'])->findOrFail($id);
 

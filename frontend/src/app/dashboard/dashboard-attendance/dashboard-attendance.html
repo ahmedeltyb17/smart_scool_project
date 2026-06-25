@@ -1,0 +1,78 @@
+<div class="da-wrap">
+  <div class="da-header">
+    <div>
+      <h1 class="da-title">Attendance</h1>
+      <p class="da-sub">Review attendance records submitted by all teachers</p>
+    </div>
+    <button class="da-btn-ghost" (click)="exportReport()">
+      <i class="fas fa-download"></i> Export Report
+    </button>
+  </div>
+
+  <div class="da-stats">
+    <div class="da-stat-card rose">
+      <div class="da-stat-icon"><i class="fas fa-circle-check"></i></div>
+      <div class="da-stat-body">
+        <div class="da-stat-val">{{ avgPct }}%</div>
+        <div class="da-stat-lbl">Avg. Attendance</div>
+      </div>
+    </div>
+    <div class="da-stat-card dark">
+      <div class="da-stat-icon"><i class="fas fa-circle-xmark"></i></div>
+      <div class="da-stat-body">
+        <div class="da-stat-val">{{ totalAbsent }}</div>
+        <div class="da-stat-lbl">Absences Today</div>
+      </div>
+    </div>
+    <div class="da-stat-card gold">
+      <div class="da-stat-icon"><i class="fas fa-clock"></i></div>
+      <div class="da-stat-body">
+        <div class="da-stat-val">{{ lateCount }}</div>
+        <div class="da-stat-lbl">Late Arrivals</div>
+      </div>
+    </div>
+    <div class="da-stat-card ice">
+      <div class="da-stat-icon"><i class="fas fa-triangle-exclamation"></i></div>
+      <div class="da-stat-body">
+        <div class="da-stat-val">{{ pendingCount }}</div>
+        <div class="da-stat-lbl">Pending Submissions</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="da-card">
+    <div class="da-card-header">
+      <h3><i class="fas fa-school"></i> Attendance by Class — Today</h3>
+    </div>
+    <div class="da-table-wrap">
+      <table class="da-table">
+        <thead>
+          <tr>
+            <th>Class</th>
+            <th>Teacher</th>
+            <th>Present</th>
+            <th>Absent</th>
+            <th>Attendance Rate</th>
+            <th>Submission Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let r of records">
+            <td>{{ r.className }}</td>
+            <td>{{ r.teacherName }}</td>
+            <td>{{ r.uploaded ? r.present : '—' }}</td>
+            <td>{{ r.uploaded ? r.absent : '—' }}</td>
+            <td>
+              <span class="da-pill" [class]="tone(r.attendancePct)" *ngIf="r.uploaded">{{ r.attendancePct }}%</span>
+              <span class="da-pill grey" *ngIf="!r.uploaded">—</span>
+            </td>
+            <td>
+              <span class="da-status-ok" *ngIf="r.uploaded"><i class="fas fa-circle-check"></i> Submitted</span>
+              <span class="da-status-pending" *ngIf="!r.uploaded"><i class="fas fa-clock"></i> Pending</span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

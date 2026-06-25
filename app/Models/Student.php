@@ -22,7 +22,9 @@ class Student extends Model
             'class_id',
             'grade',
             'student_code',
-            'enrolled_at'
+            'enrolled_at',
+            'grade_level',
+            'section'
 ];
 
     // Auto generate student code

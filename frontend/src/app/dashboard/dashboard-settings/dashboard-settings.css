@@ -1,0 +1,34 @@
+.dst-wrap { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+
+.dst-header { display: flex; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+.dst-title { font-size: clamp(20px,3vw,26px); font-weight: 800; color: #f0f0f0; margin: 0; }
+.dst-sub   { font-size: 14px; color: rgba(91,168,192,0.7); margin: 4px 0 0; }
+
+.dst-card {
+  background: rgba(18,25,32,0.8); border: 1px solid rgba(201,169,110,0.1); border-radius: 18px;
+  padding: 24px; max-width: 540px;
+}
+
+.dst-row { display: flex; flex-direction: column; gap: 7px; margin-bottom: 18px; }
+.dst-row label { font-size: 13px; font-weight: 700; color: #d0d5dd; }
+
+.dst-input {
+  padding: 11px 14px; border-radius: 10px; border: 1px solid rgba(201,169,110,0.15);
+  background: rgba(8,12,16,0.6); color: #e0e0e0; font-family: inherit; font-size: 13.5px;
+}
+.dst-input:focus { outline: none; border-color: rgba(201,169,110,0.4); }
+
+.dst-btn-primary {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: linear-gradient(135deg, #D4667A, #C9A96E);
+  color: #fff; border: none; padding: 11px 20px; border-radius: 12px;
+  font-size: 13.5px; font-weight: 700; cursor: pointer; font-family: inherit; margin-top: 6px;
+}
+.dst-btn-primary:hover { filter: brightness(1.08); }
+
+.dst-saved { margin-right: 12px; color: #5BA8C0; font-size: 13px; font-weight: 600; }
+.dst-saved i { margin-left: 5px; }
+
+@media (max-width: 480px) {
+  .dst-card { padding: 18px; }
+}

@@ -1,0 +1,198 @@
+<div class="sch-wrap">
+  <div class="sch-header">
+    <div>
+      <h1 class="sch-title">Timetable</h1>
+      <p class="sch-sub">Manage and view schedules for teachers and classes</p>
+    </div>
+    <button class="sch-btn-primary" (click)="openAddModal()">
+      <i class="fas fa-plus"></i> Add Period
+    </button>
+  </div>
+
+  <div class="sch-mode-bar">
+    <button class="sch-mode-btn" [class.active]="viewMode === 'teacher'" (click)="viewMode = 'teacher'">
+      <i class="fas fa-chalkboard-user"></i> Teacher Schedule
+    </button>
+    <button class="sch-mode-btn" [class.active]="viewMode === 'class'" (click)="viewMode = 'class'">
+      <i class="fas fa-school"></i> Class Schedule
+    </button>
+  </div>
+
+  <div class="sch-selector-row">
+    <ng-container *ngIf="viewMode === 'teacher'">
+      <label class="sch-select-label">Select Teacher</label>
+      <div class="sch-chips">
+        <button class="sch-chip" *ngFor="let t of teachersService.getAll()"
+                [class.active]="selectedTeacherId === t.id" (click)="selectedTeacherId = t.id">
+          <span class="sch-chip-avatar">{{ t.name[0] }}</span>
+          {{ t.name }}
+        </button>
+      </div>
+    </ng-container>
+    <ng-container *ngIf="viewMode === 'class'">
+      <label class="sch-select-label">Select Class</label>
+      <div class="sch-chips">
+        <button class="sch-chip" *ngFor="let c of classesService.getAll()"
+                [class.active]="selectedClassId === c.id" (click)="selectedClassId = c.id">
+          <i class="fas fa-school" style="font-size:11px;opacity:.6"></i>
+          {{ c.name }}
+        </button>
+      </div>
+    </ng-container>
+  </div>
+
+  <div class="sch-stats" *ngIf="currentSlots.length > 0">
+    <div class="sch-stat-item">
+      <i class="fas fa-calendar-week"></i>
+      <span>{{ totalWeeklyPeriods }} periods/week</span>
+    </div>
+    <div class="sch-stat-item">
+      <i class="fas fa-book-open"></i>
+      <span>{{ uniqueSubjects.length }} subjects</span>
+    </div>
+    <div class="sch-stat-item">
+      <i class="fas fa-calendar-days"></i>
+      <span>{{ busyDays() }} school days</span>
+    </div>
+    <div class="sch-stat-item" *ngIf="viewMode === 'teacher' && currentTeacher">
+      <i class="fas fa-chalkboard-user"></i>
+      <span>{{ currentTeacher.subject }}</span>
+    </div>
+    <div class="sch-stat-item" *ngIf="viewMode === 'class' && currentClass">
+      <i class="fas fa-users"></i>
+      <span>{{ currentClass.studentsCount }} students</span>
+    </div>
+  </div>
+
+  <div class="sch-table-outer">
+    <table class="sch-table">
+      <thead>
+        <tr>
+          <th class="sch-th-period">Period / Day</th>
+          <th *ngFor="let d of days">{{ d }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let p of periods; let pi = index">
+          <td class="sch-period-cell">
+            <div class="sch-period-num">{{ p }}</div>
+            <div class="sch-period-time">{{ periodTimes[pi] }}</div>
+          </td>
+          <td *ngFor="let d of days" class="sch-day-cell" [class.sch-empty-cell]="!getCell(d, pi)">
+            <ng-container *ngIf="getCell(d, pi) as slot">
+              <div class="sch-slot" [class]="subjectColor(slot.subject)">
+                <div class="sch-slot-subject">{{ slot.subject }}</div>
+                <div class="sch-slot-meta" *ngIf="viewMode === 'class'">
+                  <i class="fas fa-chalkboard-user"></i> {{ slot.teacherName }}
+                </div>
+                <div class="sch-slot-meta" *ngIf="viewMode === 'teacher'">
+                  <i class="fas fa-school"></i> {{ slot.className }}
+                </div>
+                <div class="sch-slot-room" *ngIf="slot.room">
+                  <i class="fas fa-door-open"></i> Room {{ slot.room }}
+                </div>
+                <button class="sch-slot-del" (click)="confirmDelete(slot)" title="Delete period">
+                  <i class="fas fa-xmark"></i>
+                </button>
+              </div>
+            </ng-container>
+            <ng-container *ngIf="!getCell(d, pi)">
+              <button class="sch-add-cell" (click)="openAddModal(d, pi)">
+                <i class="fas fa-plus"></i>
+              </button>
+            </ng-container>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="sch-legend">
+    <div class="sch-legend-item arabic"><span></span> Arabic</div>
+    <div class="sch-legend-item math"><span></span> Mathematics</div>
+    <div class="sch-legend-item science"><span></span> Science</div>
+    <div class="sch-legend-item english"><span></span> English</div>
+    <div class="sch-legend-item social"><span></span> Social Studies</div>
+    <div class="sch-legend-item other"><span></span> Other</div>
+  </div>
+</div>
+
+<!-- Add Period Modal -->
+<div class="sch-modal-overlay" *ngIf="showAddModal" (click)="showAddModal = false">
+  <div class="sch-modal" (click)="$event.stopPropagation()">
+    <div class="sch-modal-header">
+      <h3><i class="fas fa-calendar-plus"></i> Add New Period</h3>
+      <button class="sch-modal-close" (click)="showAddModal = false"><i class="fas fa-xmark"></i></button>
+    </div>
+    <div class="sch-form">
+      <div class="sch-form-row">
+        <div class="sch-field">
+          <label>Day</label>
+          <select [(ngModel)]="addForm.day">
+            <option *ngFor="let d of days" [value]="d">{{ d }}</option>
+          </select>
+        </div>
+        <div class="sch-field">
+          <label>Period</label>
+          <select [(ngModel)]="addForm.period">
+            <option *ngFor="let p of periods; let i = index" [value]="i">{{ p }} — {{ periodTimes[i] }}</option>
+          </select>
+        </div>
+      </div>
+      <div class="sch-field">
+        <label>Subject</label>
+        <input type="text" [(ngModel)]="addForm.subject" placeholder="e.g. Mathematics" list="subjects-list" />
+        <datalist id="subjects-list">
+          <option value="Arabic"></option>
+          <option value="Mathematics"></option>
+          <option value="Science"></option>
+          <option value="English"></option>
+          <option value="Social Studies"></option>
+          <option value="Religion"></option>
+          <option value="Art"></option>
+          <option value="Physical Education"></option>
+        </datalist>
+      </div>
+      <div class="sch-form-row">
+        <div class="sch-field">
+          <label>Teacher</label>
+          <select [(ngModel)]="addForm.teacherId">
+            <option [value]="0" disabled>Select teacher</option>
+            <option *ngFor="let t of teachersService.getAll()" [value]="t.id">{{ t.name }}</option>
+          </select>
+        </div>
+        <div class="sch-field">
+          <label>Class</label>
+          <select [(ngModel)]="addForm.classId">
+            <option [value]="0" disabled>Select class</option>
+            <option *ngFor="let c of classesService.getAll()" [value]="c.id">{{ c.name }}</option>
+          </select>
+        </div>
+      </div>
+      <div class="sch-field">
+        <label>Room Number <span class="sch-optional">(optional)</span></label>
+        <input type="text" [(ngModel)]="addForm.room" placeholder="e.g. 101" />
+      </div>
+      <div class="sch-form-actions">
+        <button class="sch-btn-cancel" (click)="showAddModal = false">Cancel</button>
+        <button class="sch-btn-save" (click)="submitAdd()"
+                [disabled]="!addForm.subject || !addForm.teacherId || !addForm.classId">
+          <i class="fas fa-check"></i> Save Period
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Confirm Modal -->
+<div class="sch-modal-overlay" *ngIf="slotToDelete" (click)="slotToDelete = null">
+  <div class="sch-modal sch-modal-sm" (click)="$event.stopPropagation()">
+    <div class="sch-del-icon"><i class="fas fa-trash"></i></div>
+    <h3>Delete Period</h3>
+    <p>Delete <strong>{{ slotToDelete!.subject }}</strong> on {{ slotToDelete!.day }} — {{ periods[slotToDelete!.period] }}?</p>
+    <div class="sch-form-actions">
+      <button class="sch-btn-cancel" (click)="slotToDelete = null">Cancel</button>
+      <button class="sch-btn-danger" (click)="doDelete()"><i class="fas fa-trash"></i> Delete</button>
+    </div>
+  </div>
+</div>

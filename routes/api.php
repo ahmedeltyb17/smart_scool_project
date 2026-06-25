@@ -16,6 +16,15 @@ use App\Http\Controllers\QuizController;
 use App\Http\Controllers\QuizResultController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\AssignmentSubmissionController;
+use App\Http\Controllers\UserController;
+use App\Http\Controllers\Api\DashboardController;
+use App\Http\Controllers\Api\TeacherController as ApiTeacherController;
+use App\Http\Controllers\Api\StudentController as ApiStudentController;
+use App\Http\Controllers\Api\ClassController as ApiClassController;
+use App\Http\Controllers\Api\ScheduleController as ApiScheduleController;
+use App\Http\Controllers\Api\AttendanceController as ApiAttendanceController;
+use App\Http\Controllers\Api\GradeController as ApiGradeController;
+
 
 
 
@@ -47,108 +56,6 @@ Route::prefix('v1/auth')->group(function () {
     });
 });
 
-// grades student and profile 
-// Route::get('/student/profile', [StudentController::class, 'profile'])
-//     ->middleware('auth.student');
-
-//     Route::get('/student/grades', [StudentController::class, 'grades'])
-//     ->middleware('auth.student');
-
-// //attendance
-//mark
-
-// Route::prefix('attendance')->middleware('auth:sanctum')->group(function () {
-
-//     Route::middleware('auth.teacher')->group(function () {
-//         Route::post('mark', [AttendanceController::class, 'mark']);
-//         Route::get('report', [AttendanceController::class, 'report']);
-//         Route::get('class/{classId}/today', [AttendanceController::class, 'today']);
-//         Route::put('{id}', [AttendanceController::class, 'update']);
-    
-//     });
-
-
-// });
-
-// Route::prefix('attendance')->middleware('auth:sanctum')->group(function () {
-
-//     // للطالب (يشوف نفسه بس)
-//     Route::get('my-history', [AttendanceController::class, 'studentHistory'])
-//         ->middleware('auth.student');
-
-//     // للمدرس (يشوف أي طالب)
-//     Route::get('student/{studentId}', [AttendanceController::class, 'studentHistory'])
-//         ->middleware('auth.teacher');
-
-// });
-
-// // parents show all students linked to them
-// Route::middleware(['auth:sanctum', 'role:parent'])
-//     ->prefix('parent')
-//     ->group(function () {
-//         Route::get('/profile', [ParentController::class, 'profile']);
-//         Route::get('/children', [ParentController::class, 'myChildren']);
-
-//         Route::get('/children/{id}', [ParentController::class, 'showChild']);
-
-//         Route::get('/children/{studentId}/attendance', [ParentController::class, 'ChildAttendance']);
-
-//         Route::get('/children/{studentId}/grades', [ParentController::class, 'ChildGrades']);
-
-//         Route::post('/children/link', [ParentController::class, 'linkStudent']);
-
-//         Route::delete('/children/{studentId}/unlink', [ParentController::class, 'unlinkStudent']);
-//     });
-
-
-    // grade show all grades for student and profile
-    // Route::prefix('v1/grades')
-    // ->middleware('auth:sanctum')
-    // ->group(function () {
-
-    //     // ───────── Teacher / Admin ─────────
-    //     Route::middleware(['role:teacher,admin'])->group(function () {
-    //         // all grades for student
-    //         Route::get('/', [GradeController::class, 'index']);
-    //         Route::post('/', [GradeController::class, 'store']);
-
-    //         Route::put('/{id}', [GradeController::class, 'update']);
-    //         Route::delete('/{id}', [GradeController::class, 'destroy']);
-
-    //         Route::get('/student/{studentId}/summary',
-    //             [GradeController::class, 'studentSummary']);
-    //     });
-
-    //     // ───────── Shared (Teacher/Admin/Student view single grade) ─────────
-    //     Route::get('/{id}', [GradeController::class, 'show']);
-    // });
-
-    // // student show grades 
-    // Route::middleware(['auth:sanctum', 'role:student'])
-    // ->get('/v1/grades/my-grades', [GradeController::class, 'myGrades']);
-
-
-
-
-    
-
-    // // assignments
-    //     Route::get('/assignments', [AssignmentController::class, 'index']);
-
-    //     Route::post('/assignments', [AssignmentController::class, 'store']);
-
-    //     Route::get('/assignments/{id}', [AssignmentController::class, 'show']);
-
-    //     Route::put('/assignments/{id}', [AssignmentController::class, 'update']);
-
-    //     Route::delete('/assignments/{id}', [AssignmentController::class, 'destroy']);
-
-    //     Route::patch('/assignments/{id}/publish', [AssignmentController::class, 'publish']);
-
-
-        //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        //////////////////////////////////////////  كل واحد لوحده 
-    
     
         // student 
     Route::prefix('v1/student')->middleware('auth:sanctum')->group(function () {
@@ -158,28 +65,31 @@ Route::prefix('v1/auth')->group(function () {
         // show materials for student   
         Route::get('/materials', [MaterialController::class, 'index']);    
     
-    
-    // Assignments
+     //view grades for assignments
+        Route::get('/assignments/grades', [AssignmentSubmissionController::class, 'StudentGrades']);
+        // Assignments
         Route::get('/assignments', [AssignmentController::class, 'index']);
-        Route::get('/assignments/{id}', [AssignmentController::class, 'show']);
 
-    // Submit assignment
+
+        // Submit assignment
         Route::post('/assignment-submissions', [AssignmentSubmissionController::class, 'submit']);
 
-    // View own submissions + grades
+        // View own submissions + grades
         Route::get('/student/submissions', [AssignmentSubmissionController::class, 'studentSubmissions']);
 
+
         //attendance
-         Route::get('/attendance/my-history', [AttendanceController::class, 'myHistory']);
+        Route::get('/attendance/my-history', [AttendanceController::class, 'myHistory']);
 
     // Quizzes
         Route::get('/quizzes', [QuizController::class, 'studentQuizzes']);
 
     // Quiz results
-        Route::get('/student/results', [QuizResultController::class, 'studentResults']);
+        Route::get('/results', [QuizResultController::class, 'studentResults']);
 
     
         Route::get('/schedule', [ScheduleController::class, 'studentSchedule']);
+        Route::get('/assignments/{id}', [AssignmentController::class, 'show']);
 });
 
 
@@ -202,15 +112,15 @@ Route::get('/get-profile', [AuthController::class, 'getProfile']);
     Route::get('/quizzes/{id}', [QuizController::class, 'show']);
     Route::delete('/quizzes/{id}', [QuizController::class, 'destroy']);
 
-    Route::post('/quiz-results', [QuizResultController::class, 'store']);
+    Route::post('/grades-results', [QuizResultController::class, 'store']);
 
     /*
     | Assignment Routes
     */// Assignments
     Route::post('/assignments', [AssignmentController::class, 'store']);
-    Route::put('/assignments/{id}', [AssignmentController::class, 'update']);
-    Route::delete('/assignments/{id}', [AssignmentController::class, 'destroy']);
-    Route::patch('/assignments/{id}/publish', [AssignmentController::class, 'publish']);
+    // Route::put('/assignments/{id}', [AssignmentController::class, 'update']);
+    // Route::delete('/assignments/{id}', [AssignmentController::class, 'destroy']);
+    // Route::patch('/assignments/{id}/publish', [AssignmentController::class, 'publish']);
 
     // View assignments for teacher
     Route::get('/assignments', [AssignmentController::class, 'index']);
@@ -259,11 +169,11 @@ Route::post('/upload_materials', [MaterialController::class, 'store']);
 
 Route::prefix('v1/parent')->middleware('auth:sanctum')->group(function () {
 
-// get profile
-Route::get('/get-profile', [AuthController::class, 'getProfile']);
+    // get profile
+    Route::get('/get-profile', [AuthController::class, 'getProfile']);
     // link children to parent
     Route::post('/link-student', [ParentController::class, 'linkStudent']);
-    Route::post('/unlink-student', [ParentController::class, 'unlinkStudent']);
+    Route::delete('/unlink-student', [ParentController::class, 'unlinkStudent']);
     Route::get('/children', [ParentController::class, 'children']);
 
     // Children results (quizzes + assignments)
@@ -305,4 +215,36 @@ Route::prefix('v1/admin')
 
     Route::post('/schedules', [ScheduleController::class,'store']);
 
+
+
+
+    Route::get('/users', [UserController::class, 'index']);
+});
+
+
+
+// -----------------------------------------------------------//
+//----------dash--------------------------------------
+
+
+Route::prefix('dashboard')->group(function () {
+    Route::get('/',          [DashboardController::class,    'index']);
+    Route::get('teachers',   [ApiTeacherController::class,   'index']);
+    Route::post('teachers',  [ApiTeacherController::class,   'store']);
+    Route::delete('teachers/{teacher}', [ApiTeacherController::class, 'destroy']);
+
+    Route::get('students',   [ApiStudentController::class,   'index']);
+    Route::post('students',  [ApiStudentController::class,   'store']);
+    Route::delete('students/{student}', [ApiStudentController::class, 'destroy']);
+
+    Route::get('classes',    [ApiClassController::class,     'index']);
+    Route::post('classes',   [ApiClassController::class,     'store']);
+    Route::delete('classes/{schoolClass}', [ApiClassController::class, 'destroy']);
+
+    Route::get('schedule',   [ApiScheduleController::class,  'index']);
+    Route::post('schedule',  [ApiScheduleController::class,  'store']);
+    Route::delete('schedule/{schedule}', [ApiScheduleController::class, 'destroy']);
+
+    Route::get('attendance', [ApiAttendanceController::class, 'index']);
+    Route::get('grades',     [ApiGradeController::class,     'index']);
 });

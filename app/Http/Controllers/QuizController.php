@@ -21,20 +21,22 @@ class QuizController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'class_id' => 'required|exists:classes,id',
             'title' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'quiz_date' => 'required|date',
-            'total_marks' => 'required|integer|min:1'
-        ]);
+            'max_score' => 'required|integer|min:1'
 
-        $quiz = Quiz::create($validated);
+            
+]);
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Quiz created successfully',
-            'data' => $quiz
-        ], 201);
+    $quiz = Quiz::create($validated);
+    
+    return response()->json([
+        'success' => true,
+        'message' => 'Quiz created successfully',
+        'data' => [
+            'title' => $quiz->title,
+            'max_score' => $quiz->max_score,
+    ]
+], 201);
     }
 
     public function show($id): JsonResponse
@@ -49,9 +51,13 @@ class QuizController extends Controller
         }
 
         return response()->json([
-            'success' => true,
-            'data' => $quiz
-        ]);
+    'success' => true,
+    'message' => 'Quiz created successfully',
+    'data' => [
+        'title' => $quiz->title,
+        'max_score' => $quiz->max_score,
+    ]
+], 201);
     }
 
     public function destroy($id): JsonResponse

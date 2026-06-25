@@ -1,0 +1,100 @@
+<div class="dc-wrap">
+  <div class="dc-header">
+    <div>
+      <h1 class="dc-title">Classes</h1>
+      <p class="dc-sub">{{ classesService.getAll().length }} classes registered</p>
+    </div>
+    <button class="dc-btn-primary" (click)="openAddModal()">
+      <i class="fas fa-plus"></i> Add Class
+    </button>
+  </div>
+
+  <div class="dc-toolbar">
+    <div class="dc-search">
+      <i class="fas fa-magnifying-glass"></i>
+      <input type="text" placeholder="Search by class name or teacher..." [(ngModel)]="searchTerm" />
+    </div>
+  </div>
+
+  <div class="dc-grid">
+    <div class="dc-card" *ngFor="let c of filteredClasses">
+      <div class="dc-card-top">
+        <div class="dc-card-icon"><i class="fas fa-school"></i></div>
+        <button class="dc-icon-btn dc-delete-btn" (click)="classesService.delete(c.id)" title="Delete class">
+          <i class="fas fa-trash"></i>
+        </button>
+      </div>
+      <h3 class="dc-card-title">{{ c.name }}</h3>
+      <p class="dc-card-grade">{{ c.grade }}</p>
+      <div class="dc-card-teacher">
+        <div class="dc-avatar">{{ teacherInitial(c.teacherName) }}</div>
+        <span>{{ c.teacherName }}</span>
+      </div>
+      <div class="dc-card-stats">
+        <div>
+          <div class="dc-stat-val">{{ c.studentsCount }}</div>
+          <div class="dc-stat-lbl">Students</div>
+        </div>
+        <div class="dc-divider"></div>
+        <div>
+          <div class="dc-stat-val" [class]="attendanceTone(c.attendancePct)">
+            {{ c.attendancePct > 0 ? c.attendancePct + '%' : '—' }}
+          </div>
+          <div class="dc-stat-lbl">Attendance</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="dc-empty" *ngIf="filteredClasses.length === 0">
+    <i class="fas fa-school"></i>
+    <p>No classes match your search</p>
+  </div>
+</div>
+
+<!-- Add Class Modal -->
+<div class="dc-modal-overlay" *ngIf="showAddModal" (click)="showAddModal = false">
+  <div class="dc-add-modal" (click)="$event.stopPropagation()">
+    <div class="dc-add-modal-header">
+      <h3><i class="fas fa-plus"></i> Add New Class</h3>
+      <button class="dc-modal-close" (click)="showAddModal = false"><i class="fas fa-xmark"></i></button>
+    </div>
+    <div class="dc-form">
+      <div class="dc-form-row">
+        <div class="dc-field">
+          <label>Class Name <span class="dc-req">*</span></label>
+          <input type="text" [(ngModel)]="addForm.name" placeholder="e.g. Grade 1 - A" />
+        </div>
+        <div class="dc-field">
+          <label>Grade Level <span class="dc-req">*</span></label>
+          <select [(ngModel)]="addForm.grade">
+            <option value="" disabled>Select grade</option>
+            <option *ngFor="let g of grades" [value]="g">{{ g }}</option>
+          </select>
+        </div>
+      </div>
+      <div class="dc-form-row">
+        <div class="dc-field">
+          <label>Responsible Teacher <span class="dc-req">*</span></label>
+          <select [(ngModel)]="addForm.teacherId">
+            <option [value]="0" disabled>Select teacher</option>
+            <option *ngFor="let t of teachersService.getAll()" [value]="t.id">{{ t.name }}</option>
+          </select>
+        </div>
+        <div class="dc-field">
+          <label>Number of Students <span class="dc-optional">(optional)</span></label>
+          <input type="number" [(ngModel)]="addForm.studentsCount" placeholder="0" min="0" max="60" />
+        </div>
+      </div>
+      <div class="dc-form-error" *ngIf="formError">
+        <i class="fas fa-circle-exclamation"></i> {{ formError }}
+      </div>
+      <div class="dc-form-actions">
+        <button class="dc-btn-cancel" (click)="showAddModal = false">Cancel</button>
+        <button class="dc-btn-save" (click)="submitAdd()">
+          <i class="fas fa-check"></i> Save Class
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

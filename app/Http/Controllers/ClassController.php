@@ -162,7 +162,7 @@ class ClassController extends Controller
     public function schedule(int $id): JsonResponse
     {
         $class     = ClassModel::findOrFail($id);
-        $schedules = Schedules::where('class_id', $id)
+        $schedule = Schedule::where('class_id', $id)
                             ->orderBy('day_of_week')
                             ->orderBy('start_time')
                             ->get();
@@ -171,7 +171,7 @@ class ClassController extends Controller
             'success' => true,
             'data'    => [
                 'class'     => $class->only('id', 'name', 'grade_level', 'subject'),
-                'schedules' => $schedules,
+                'schedules' => $schedule,
             ],
         ]);
     }

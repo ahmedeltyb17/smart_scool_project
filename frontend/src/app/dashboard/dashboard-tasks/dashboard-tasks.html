@@ -1,0 +1,53 @@
+<div class="dk-wrap">
+  <div class="dk-header">
+    <div>
+      <h1 class="dk-title">Quizzes & Tasks</h1>
+      <p class="dk-sub">All quizzes and assignments submitted by teachers</p>
+    </div>
+  </div>
+
+  <div class="dk-toolbar">
+    <div class="dk-search">
+      <i class="fas fa-magnifying-glass"></i>
+      <input type="text" placeholder="Search by title, teacher or class..." [(ngModel)]="searchTerm" />
+    </div>
+  </div>
+
+  <div class="dk-table-wrap">
+    <table class="dk-table">
+      <thead>
+        <tr>
+          <th>Title</th>
+          <th>Type</th>
+          <th>Teacher</th>
+          <th>Class</th>
+          <th>Date</th>
+          <th>Submission Rate</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let t of filteredTasks">
+          <td>{{ t.title }}</td>
+          <td>
+            <span class="dk-tag" [class]="tasksService.typeClass(t.type)">{{ tasksService.typeLabel(t.type) }}</span>
+          </td>
+          <td>{{ t.teacherName }}</td>
+          <td>{{ t.className }}</td>
+          <td dir="ltr">{{ t.date }}</td>
+          <td>
+            <div class="dk-submission">
+              <div class="dk-submission-track">
+                <div class="dk-submission-fill" [style.width]="submissionPct(t) + '%'"></div>
+              </div>
+              <span>{{ t.submissions }}/{{ t.totalStudents }}</span>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="dk-empty" *ngIf="filteredTasks.length === 0">
+      <i class="fas fa-book-open"></i>
+      <p>No quizzes or tasks match your search</p>
+    </div>
+  </div>
+</div>
